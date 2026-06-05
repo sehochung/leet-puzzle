@@ -1,0 +1,84 @@
+{
+  "id": "puzzle-006",
+  "date": "2026-06-06",
+  "title": "Minimum Window Substring",
+  "baseProblem": {
+    "statement": "Given two strings s and t, return the shortest substring of s that contains every character of t (including duplicates). If no such substring exists, return an empty string.",
+    "example": {
+      "input": { "s": "ADOBECODEBANC", "t": "ABC" },
+      "output": "BANC"
+    }
+  },
+  "rounds": [
+    {
+      "id": 1,
+      "type": "principle",
+      "timeLimitSeconds": 20,
+      "question": "What two phases does each iteration of the sliding window perform?",
+      "options": [
+        "Expand right until valid, then shrink left while still valid",
+        "Shrink left until invalid, then expand right",
+        "Expand both pointers at the same time",
+        "Binary search for the answer length, then verify"
+      ],
+      "correctIndex": 0,
+      "explanation": "Expand to satisfy the requirement, shrink to find the minimum that still satisfies it. Repeat until the right pointer reaches the end."
+    },
+    {
+      "id": 2,
+      "type": "approach",
+      "timeLimitSeconds": 25,
+      "question": "What's the cleanest way to track whether the current window contains all required characters?",
+      "options": [
+        "Count of distinct characters matched, compared against the number of distinct characters in t",
+        "Total count of characters in the window compared against length of t",
+        "Whether the window's character set equals t's character set",
+        "Whether every character in t appears in the window at least once"
+      ],
+      "correctIndex": 0,
+      "explanation": "A counter of 'how many required characters have hit their target count' lets you check validity in O(1). Comparing sets or full counts each step is O(k) per check."
+    },
+    {
+      "id": 3,
+      "type": "complexity",
+      "timeLimitSeconds": 20,
+      "question": "What's the time complexity of the optimal sliding window solution?",
+      "options": [
+        "O(s log t)",
+        "O(s + t)",
+        "O(s × t)",
+        "O(s²)"
+      ],
+      "correctIndex": 1,
+      "explanation": "Each character in s is visited at most twice (once by each pointer), and t is processed once for the target counts. Linear in the combined length."
+    },
+    {
+      "id": 4,
+      "type": "ambiguity",
+      "timeLimitSeconds": 30,
+      "question": "If t contains a character twice (e.g., t = \"AABC\"), what does the window need to do?",
+      "options": [
+        "Find at least one of that character anywhere in s",
+        "Find at least two of that character in the window simultaneously",
+        "Find that character exactly twice — no more, no less",
+        "Find that character once if and only if it's already in the window"
+      ],
+      "correctIndex": 1,
+      "explanation": "Duplicates in t mean duplicate requirements. The window must contain each character at least as many times as t does, not just the distinct set."
+    },
+    {
+      "id": 5,
+      "type": "edgeCase",
+      "timeLimitSeconds": 25,
+      "question": "Which input is most likely to expose a bug?",
+      "options": [
+        "s = \"a\", t = \"a\" (trivial match)",
+        "s = \"a\", t = \"aa\" (t requires more than s contains)",
+        "s = \"abc\", t = \"d\" (no match exists)",
+        "s = \"abcdef\", t = \"abc\" (match at the start)"
+      ],
+      "correctIndex": 1,
+      "explanation": "Implementations that only check distinct characters will incorrectly return \"a\" instead of empty string. Tests whether your counter respects multiplicity."
+    }
+  ]
+}

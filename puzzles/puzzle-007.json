@@ -1,0 +1,84 @@
+{
+  "id": "puzzle-007",
+  "date": "2026-06-07",
+  "title": "Search in Rotated Sorted Array",
+  "baseProblem": {
+    "statement": "Given a sorted array that has been rotated at some unknown pivot, find the index of a target value in O(log n) time. Return -1 if not found.",
+    "example": {
+      "input": { "nums": [4, 5, 6, 7, 0, 1, 2], "target": 0 },
+      "output": 4
+    }
+  },
+  "rounds": [
+    {
+      "id": 1,
+      "type": "principle",
+      "timeLimitSeconds": 20,
+      "question": "Standard binary search needs a fully sorted array. What property of a rotated sorted array preserves enough order for binary search to still work?",
+      "options": [
+        "Every element is still smaller than every element after it",
+        "At least one half of any split around the midpoint is fully sorted",
+        "The pivot is always at a predictable index",
+        "The array can be re-sorted in O(log n) time"
+      ],
+      "correctIndex": 1,
+      "explanation": "Cut the array anywhere; one side is always normally sorted. That's the half where you can check 'is target in this range' in O(1)."
+    },
+    {
+      "id": 2,
+      "type": "approach",
+      "timeLimitSeconds": 25,
+      "question": "At each step, how do you decide which half to recurse into?",
+      "options": [
+        "Compare target to mid; if smaller, go left; if larger, go right",
+        "Identify which half is sorted, check if target falls in its range, recurse accordingly",
+        "Always go right unless mid equals target",
+        "Recurse into both halves and combine results"
+      ],
+      "correctIndex": 1,
+      "explanation": "You can't compare to mid alone because the rotation breaks the ordering assumption. Identifying the sorted half first restores reliable range checks."
+    },
+    {
+      "id": 3,
+      "type": "complexity",
+      "timeLimitSeconds": 20,
+      "question": "What's the time complexity of the optimal solution?",
+      "options": [
+        "O(1)",
+        "O(log n)",
+        "O(n)",
+        "O(n log n)"
+      ],
+      "correctIndex": 1,
+      "explanation": "Each step halves the search space, just like standard binary search. The rotation adds bookkeeping but doesn't change the depth."
+    },
+    {
+      "id": 4,
+      "type": "ambiguity",
+      "timeLimitSeconds": 30,
+      "question": "What if the array contains duplicates? How does the algorithm change?",
+      "options": [
+        "It still runs in O(log n) — duplicates don't affect the logic",
+        "It degrades to O(n) in the worst case because you can't always tell which half is sorted",
+        "It returns immediately as soon as any duplicate is found",
+        "Duplicates make the problem unsolvable"
+      ],
+      "correctIndex": 1,
+      "explanation": "If nums[left] == nums[mid] == nums[right], you can't determine which side is sorted and must scan linearly past the duplicates. Standard interview follow-up question."
+    },
+    {
+      "id": 5,
+      "type": "edgeCase",
+      "timeLimitSeconds": 25,
+      "question": "Which input is most likely to expose a bug in the half-identification logic?",
+      "options": [
+        "[1, 2, 3, 4, 5], target = 3 (unrotated)",
+        "[3, 1], target = 1 (minimum rotation)",
+        "[5, 1, 2, 3, 4], target = 5 (rotated by one)",
+        "[1, 2, 3, 4, 5], target = 6 (target not present)"
+      ],
+      "correctIndex": 1,
+      "explanation": "With only two elements, off-by-one errors in identifying the sorted half show up immediately. Many implementations handle large rotated arrays but fail here."
+    }
+  ]
+}

@@ -1,0 +1,84 @@
+{
+  "id": "puzzle-003",
+  "date": "2026-06-03",
+  "title": "Valid Palindrome",
+  "baseProblem": {
+    "statement": "Given a string, return true if it reads the same forwards and backwards after converting to lowercase and removing non-alphanumeric characters.",
+    "example": {
+      "input": "A man, a plan, a canal: Panama",
+      "output": true
+    }
+  },
+  "rounds": [
+    {
+      "id": 1,
+      "type": "principle",
+      "timeLimitSeconds": 20,
+      "question": "You could reverse the cleaned string and compare it to the original. What's the main reason two pointers is preferred?",
+      "options": [
+        "It avoids allocating a new string of the same size",
+        "It runs in O(log n) instead of O(n)",
+        "It handles Unicode correctly while reversal doesn't",
+        "It's the only approach that works on streams"
+      ],
+      "correctIndex": 0,
+      "explanation": "Both approaches are O(n) time, but reversal needs O(n) extra space. Two pointers compares in place with O(1) extra space."
+    },
+    {
+      "id": 2,
+      "type": "approach",
+      "timeLimitSeconds": 25,
+      "question": "How should the two pointers handle non-alphanumeric characters?",
+      "options": [
+        "Pre-clean the string first, then compare with two pointers",
+        "Skip them on the fly — advance the pointer past any non-alphanumeric character before comparing",
+        "Replace them with a placeholder character that matches itself",
+        "Throw an error if any are encountered"
+      ],
+      "correctIndex": 1,
+      "explanation": "Skipping on the fly preserves the O(1) space advantage. Pre-cleaning works but allocates a new string, which is what two pointers exists to avoid."
+    },
+    {
+      "id": 3,
+      "type": "complexity",
+      "timeLimitSeconds": 20,
+      "question": "What's the time complexity of the two-pointer approach?",
+      "options": [
+        "O(log n)",
+        "O(n)",
+        "O(n log n)",
+        "O(n²)"
+      ],
+      "correctIndex": 1,
+      "explanation": "Each pointer moves at most n times in total, so total work is bounded by 2n. Linear in the length of the string."
+    },
+    {
+      "id": 4,
+      "type": "ambiguity",
+      "timeLimitSeconds": 30,
+      "question": "Your interviewer asks: 'Is an empty string a palindrome?' What's the right move?",
+      "options": [
+        "Say no — there's nothing to compare",
+        "Say yes — vacuously true, two pointers handle it correctly with no iterations",
+        "Ask whether they want you to treat it as a special case or follow the natural definition",
+        "Refuse to answer until they clarify their definition of palindrome"
+      ],
+      "correctIndex": 2,
+      "explanation": "Both 'yes' and 'no' are defensible depending on convention. Asking shows you noticed the edge case AND that the answer depends on a spec decision, not your implementation."
+    },
+    {
+      "id": 5,
+      "type": "edgeCase",
+      "timeLimitSeconds": 25,
+      "question": "Which input is most likely to expose a bug in the skip-on-the-fly approach?",
+      "options": [
+        "\"racecar\" (clean palindrome)",
+        "\"hello\" (clean non-palindrome)",
+        "\".,!?\" (only non-alphanumeric characters)",
+        "\"Aa\" (mixed case, no other characters)"
+      ],
+      "correctIndex": 2,
+      "explanation": "If every character gets skipped, both pointers race past each other without ever comparing anything. Naive implementations infinite-loop or return false incorrectly here."
+    }
+  ]
+}

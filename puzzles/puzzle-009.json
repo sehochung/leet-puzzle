@@ -1,0 +1,84 @@
+{
+  "id": "puzzle-009",
+  "date": "2026-06-09",
+  "title": "Climbing Stairs",
+  "baseProblem": {
+    "statement": "You're climbing a staircase with n steps. You can climb 1 or 2 steps at a time. How many distinct ways can you reach the top?",
+    "example": {
+      "input": 4,
+      "output": 5
+    }
+  },
+  "rounds": [
+    {
+      "id": 1,
+      "type": "principle",
+      "timeLimitSeconds": 20,
+      "question": "Why does ways(n) = ways(n−1) + ways(n−2)?",
+      "options": [
+        "Because the staircase has exactly two sides",
+        "Because the last step taken was either a 1-step (from n−1) or a 2-step (from n−2), and those are disjoint paths",
+        "Because you alternate 1-steps and 2-steps",
+        "Because n is always even or odd"
+      ],
+      "correctIndex": 1,
+      "explanation": "Every path to n ends with either a 1-step or a 2-step. Counting separately and summing covers all paths without double-counting."
+    },
+    {
+      "id": 2,
+      "type": "approach",
+      "timeLimitSeconds": 25,
+      "question": "What's the most space-efficient way to compute ways(n) iteratively?",
+      "options": [
+        "Build a full array of size n+1 and read array[n] at the end",
+        "Recurse with memoization in a hash map",
+        "Track only the previous two values and roll forward",
+        "Compute using the closed-form Fibonacci formula"
+      ],
+      "correctIndex": 2,
+      "explanation": "You only ever need the last two values to compute the next. O(1) space, no array needed."
+    },
+    {
+      "id": 3,
+      "type": "complexity",
+      "timeLimitSeconds": 20,
+      "question": "What's the time complexity of the iterative O(1)-space approach?",
+      "options": [
+        "O(1)",
+        "O(log n)",
+        "O(n)",
+        "O(2ⁿ)"
+      ],
+      "correctIndex": 2,
+      "explanation": "One pass from 2 to n, constant work per step. Total: O(n)."
+    },
+    {
+      "id": 4,
+      "type": "ambiguity",
+      "timeLimitSeconds": 30,
+      "question": "A teammate says: 'Just use recursion — ways(n) = ways(n−1) + ways(n−2).' What's the problem with that as written?",
+      "options": [
+        "Recursion is forbidden in production code",
+        "Without memoization it recomputes the same subproblems exponentially many times — O(2ⁿ)",
+        "Recursion can't compute Fibonacci-like sequences correctly",
+        "The base case is ambiguous"
+      ],
+      "correctIndex": 1,
+      "explanation": "Pure recursion here is the canonical example of overlapping subproblems. Memoization or iteration fixes it; the recursive structure itself is fine."
+    },
+    {
+      "id": 5,
+      "type": "edgeCase",
+      "timeLimitSeconds": 25,
+      "question": "Which input is most likely to expose a base case bug?",
+      "options": [
+        "n = 0 (zero steps)",
+        "n = 1 (one step)",
+        "n = 45 (large enough to overflow naive recursion's stack)",
+        "n = 10 (typical case)"
+      ],
+      "correctIndex": 0,
+      "explanation": "n = 0 is the underspecified case — is there 1 way (do nothing) or 0 ways (no staircase)? Naive implementations crash or return wrong values depending on how they're seeded."
+    }
+  ]
+}

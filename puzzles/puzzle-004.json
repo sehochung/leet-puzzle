@@ -1,0 +1,84 @@
+{
+  "id": "puzzle-004",
+  "date": "2026-06-04",
+  "title": "Container With Most Water",
+  "baseProblem": {
+    "statement": "Given an array of non-negative integers representing heights of vertical lines, find two lines that together with the x-axis form a container holding the most water. Return the maximum area.",
+    "example": {
+      "input": [1, 8, 6, 2, 5, 4, 8, 3, 7],
+      "output": 49
+    }
+  },
+  "rounds": [
+    {
+      "id": 1,
+      "type": "principle",
+      "timeLimitSeconds": 20,
+      "question": "You start with pointers at both ends. When you move one inward, which one should it be?",
+      "options": [
+        "Always the left pointer — sweep left to right",
+        "Always the pointer with the lower height",
+        "Always the pointer with the higher height",
+        "Whichever points to the smaller index"
+      ],
+      "correctIndex": 1,
+      "explanation": "The area is bounded by the shorter line. Moving the taller one in can only shrink the area; moving the shorter one in is the only move that could find something better."
+    },
+    {
+      "id": 2,
+      "type": "approach",
+      "timeLimitSeconds": 25,
+      "question": "How is the area at each step calculated?",
+      "options": [
+        "(right − left) × max(height[left], height[right])",
+        "(right − left) × min(height[left], height[right])",
+        "(right + left) × min(height[left], height[right])",
+        "(right − left) × (height[left] + height[right]) / 2"
+      ],
+      "correctIndex": 1,
+      "explanation": "Width is the distance between pointers; height is bounded by the shorter line because water would spill over the lower one."
+    },
+    {
+      "id": 3,
+      "type": "complexity",
+      "timeLimitSeconds": 20,
+      "question": "What's the time complexity of the two-pointer approach?",
+      "options": [
+        "O(log n)",
+        "O(n)",
+        "O(n log n)",
+        "O(n²)"
+      ],
+      "correctIndex": 1,
+      "explanation": "Each step moves exactly one pointer inward, so the pointers meet after n steps. Linear in array length."
+    },
+    {
+      "id": 4,
+      "type": "ambiguity",
+      "timeLimitSeconds": 30,
+      "question": "A teammate says: 'Why not check every pair of lines? It's only O(n²).' What's the strongest counter-argument?",
+      "options": [
+        "O(n²) is too slow for any reasonable input size",
+        "Two pointers is provably correct because every pair the brute force checks is either evaluated or dominated by a pair the pointers do check",
+        "The brute force uses too much memory",
+        "Two pointers is easier to write than nested loops"
+      ],
+      "correctIndex": 1,
+      "explanation": "Correctness is the real argument, not speed. Knowing why two pointers doesn't miss the optimum is the senior insight. Speed alone doesn't justify it if you can't prove it works."
+    },
+    {
+      "id": 5,
+      "type": "edgeCase",
+      "timeLimitSeconds": 25,
+      "question": "Which input most clearly tests whether your pointer-movement rule is correct?",
+      "options": [
+        "[1, 1, 1, 1, 1] — all equal heights",
+        "[5, 4, 3, 2, 1] — strictly decreasing",
+        "[1, 8, 100, 8, 1] — single tall spike in the middle",
+        "[2, 1] — minimum length"
+      ],
+      "correctIndex": 2,
+      "explanation": "The tall spike tempts you to anchor on it, but the optimal pair is actually the two outer lines. Tests whether your rule resists the temptation to move toward the maximum."
+    }
+  ]
+}

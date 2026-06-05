@@ -1,0 +1,84 @@
+{
+  "id": "puzzle-001",
+  "date": "2026-06-01",
+  "title": "Group Anagrams",
+  "baseProblem": {
+    "statement": "Given an array of strings, group the anagrams together. Return them as a list of groups in any order.",
+    "example": {
+      "input": ["eat", "tea", "tan", "ate", "nat", "bat"],
+      "output": [["eat", "tea", "ate"], ["tan", "nat"], ["bat"]]
+    }
+  },
+  "rounds": [
+    {
+      "id": 1,
+      "type": "principle",
+      "timeLimitSeconds": 20,
+      "question": "Two strings are anagrams of each other iff which statement holds?",
+      "options": [
+        "They have the same length and start with the same character",
+        "They contain the same set of distinct characters, ignoring counts",
+        "They contain the same characters with the same counts — equivalently, sorting them produces identical strings",
+        "One is a substring of the other"
+      ],
+      "correctIndex": 2,
+      "explanation": "Anagrams are permutations of each other, so they share a canonical form: either the sorted character sequence or the per-character count vector. Distinct sets miss counts ('aab' vs 'ab' both have set {a,b})."
+    },
+    {
+      "id": 2,
+      "type": "approach",
+      "timeLimitSeconds": 25,
+      "question": "Given a canonical form for each string, what's the cleanest way to group them in one pass?",
+      "options": [
+        "Sort the input list by canonical form, then split into runs of equal keys",
+        "A hash map keyed by canonical form, with each value being the list of original strings",
+        "A trie built from each string's canonical form",
+        "A union-find that joins strings sharing a canonical form"
+      ],
+      "correctIndex": 1,
+      "explanation": "A hash map gives O(1) bucket lookup as you iterate, so you build all groups in a single pass. Sorting the outer list adds a needless n log n factor; trie and union-find solve harder problems than this one."
+    },
+    {
+      "id": 3,
+      "type": "complexity",
+      "timeLimitSeconds": 20,
+      "question": "Using the sorted-string canonical key, what's the time complexity for n strings of max length k?",
+      "options": [
+        "O(n)",
+        "O(n × k)",
+        "O(n × k log k)",
+        "O(n²)"
+      ],
+      "correctIndex": 2,
+      "explanation": "Sorting each string is O(k log k); doing it for all n strings dominates. Hash map insert/lookup is O(k) for the key comparison, which is absorbed into the same term."
+    },
+    {
+      "id": 4,
+      "type": "ambiguity",
+      "timeLimitSeconds": 30,
+      "question": "Your interviewer asks: 'Can you drop the log k factor?' What's the strongest answer?",
+      "options": [
+        "No — sorting is inherent to forming a canonical key",
+        "Yes — use the tuple of character counts (length 26 for lowercase ASCII) as the key, giving O(n × k) total",
+        "Yes — use a frozenset of characters as the key, since anagrams share the same character set",
+        "Yes — switch from comparison sort to a different sort algorithm"
+      ],
+      "correctIndex": 1,
+      "explanation": "A fixed-size count vector is a canonical form you can build in O(k) without sorting. The frozenset answer is the trap — it loses multiplicity, so \"aab\" and \"ab\" would incorrectly collide. State the alphabet assumption out loud when you propose it."
+    },
+    {
+      "id": 5,
+      "type": "edgeCase",
+      "timeLimitSeconds": 25,
+      "question": "Which input is most likely to expose a bug in a careless implementation?",
+      "options": [
+        "[\"abc\", \"bca\", \"cab\"] (three mutual anagrams)",
+        "[\"eat\", \"tea\", \"eat\"] (a duplicate string that's also an anagram of another)",
+        "[\"a\"] (single string)",
+        "[\"abc\", \"xyz\"] (no anagrams in the input)"
+      ],
+      "correctIndex": 1,
+      "explanation": "The problem says group, not group distinct. Implementations that store each bucket as a set, or dedupe inputs before grouping, will collapse the two \"eat\"s. The expected output preserves input multiplicity: [[\"eat\", \"tea\", \"eat\"]]."
+    }
+  ]
+}

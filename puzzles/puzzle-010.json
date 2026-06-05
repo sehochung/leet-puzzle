@@ -1,0 +1,84 @@
+{
+  "id": "puzzle-010",
+  "date": "2026-06-10",
+  "title": "Longest Increasing Subsequence",
+  "baseProblem": {
+    "statement": "Given an array of integers, return the length of the longest strictly increasing subsequence. The elements don't need to be contiguous.",
+    "example": {
+      "input": [10, 9, 2, 5, 3, 7, 101, 18],
+      "output": 4
+    }
+  },
+  "rounds": [
+    {
+      "id": 1,
+      "type": "principle",
+      "timeLimitSeconds": 20,
+      "question": "In the O(n²) DP, what does dp[i] represent?",
+      "options": [
+        "The longest increasing subsequence anywhere in the first i+1 elements",
+        "The longest increasing subsequence that ends exactly at index i",
+        "Whether nums[i] is part of the longest increasing subsequence",
+        "The index of the previous element in the longest increasing subsequence"
+      ],
+      "correctIndex": 1,
+      "explanation": "Defining dp[i] as 'must end at i' makes the recurrence clean: dp[i] = 1 + max(dp[j]) for all j < i where nums[j] < nums[i]. The final answer is max of the dp array."
+    },
+    {
+      "id": 2,
+      "type": "approach",
+      "timeLimitSeconds": 25,
+      "question": "There's an O(n log n) solution that maintains an auxiliary array. What does that array represent?",
+      "options": [
+        "A sorted copy of nums",
+        "The longest increasing subsequence itself",
+        "The smallest possible tail value for an increasing subsequence of each length",
+        "The indices of the elements in the answer"
+      ],
+      "correctIndex": 2,
+      "explanation": "The auxiliary array's length equals the answer, but its contents aren't the subsequence itself — they're the smallest tail seen so far for each possible length. Subtle and worth knowing."
+    },
+    {
+      "id": 3,
+      "type": "complexity",
+      "timeLimitSeconds": 20,
+      "question": "What's the time complexity of the standard DP approach (not the patience-sorting variant)?",
+      "options": [
+        "O(n)",
+        "O(n log n)",
+        "O(n²)",
+        "O(2ⁿ)"
+      ],
+      "correctIndex": 2,
+      "explanation": "For each index i, you scan all earlier indices j to find candidates. Quadratic in array length."
+    },
+    {
+      "id": 4,
+      "type": "ambiguity",
+      "timeLimitSeconds": 30,
+      "question": "Your interviewer says: 'Return the actual subsequence, not just its length.' What changes?",
+      "options": [
+        "Nothing — the DP table already contains it",
+        "You need to track a parent pointer at each index and reconstruct by walking backwards from the max",
+        "You have to switch to brute force — DP can't reconstruct paths",
+        "You need to sort the input first"
+      ],
+      "correctIndex": 1,
+      "explanation": "DP computes the length, but reconstruction requires remembering which previous index each dp[i] was extended from. Common follow-up that catches candidates who memorized the length-only solution."
+    },
+    {
+      "id": 5,
+      "type": "edgeCase",
+      "timeLimitSeconds": 25,
+      "question": "Which input is most likely to expose a bug in the strictly-increasing condition?",
+      "options": [
+        "[1, 2, 3, 4, 5] (fully increasing)",
+        "[5, 4, 3, 2, 1] (fully decreasing)",
+        "[1, 1, 1, 1, 1] (all equal)",
+        "[10, 9, 2, 5, 3, 7, 101, 18] (the example)"
+      ],
+      "correctIndex": 2,
+      "explanation": "Implementations that use <= instead of < return 5 instead of 1. The 'strictly' in the problem statement is the entire test."
+    }
+  ]
+}

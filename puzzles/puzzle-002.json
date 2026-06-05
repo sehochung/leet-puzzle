@@ -1,0 +1,84 @@
+{
+  "id": "puzzle-002",
+  "date": "2026-06-02",
+  "title": "Two Sum",
+  "baseProblem": {
+    "statement": "Given an array of integers and a target value, return the indices of the two numbers that add up to the target. Each input has exactly one solution, and you cannot use the same element twice.",
+    "example": {
+      "input": { "nums": [2, 7, 11, 15], "target": 9 },
+      "output": [0, 1]
+    }
+  },
+  "rounds": [
+    {
+      "id": 1,
+      "type": "principle",
+      "timeLimitSeconds": 20,
+      "question": "The brute force is O(n²): for each number, scan the rest of the array. What single change to that approach gets you to O(n)?",
+      "options": [
+        "Sort the array first to enable binary search for the second number",
+        "Replace the inner scan with a hash map lookup for the complement",
+        "Use two pointers moving from opposite ends of the array",
+        "Cache previously computed sums in an auxiliary array"
+      ],
+      "correctIndex": 1,
+      "explanation": "For each number x, you need to find target − x. A hash map lookup is O(1), so the total drops to O(n). Sorting destroys the original indices the problem asks for."
+    },
+    {
+      "id": 2,
+      "type": "approach",
+      "timeLimitSeconds": 25,
+      "question": "What should the hash map store as you iterate?",
+      "options": [
+        "Value → count of occurrences",
+        "Index → value",
+        "Value → index",
+        "Value → its complement (target − value)"
+      ],
+      "correctIndex": 2,
+      "explanation": "You return indices, so when you find a complement you need to know where it was. Value → index gives you both lookup and the answer in one step."
+    },
+    {
+      "id": 3,
+      "type": "complexity",
+      "timeLimitSeconds": 20,
+      "question": "What's the time complexity of the hash map approach in the average case?",
+      "options": [
+        "O(log n)",
+        "O(n)",
+        "O(n log n)",
+        "O(n²)"
+      ],
+      "correctIndex": 1,
+      "explanation": "Single pass through n elements, each doing an O(1) hash map lookup and insert. Total: O(n)."
+    },
+    {
+      "id": 4,
+      "type": "ambiguity",
+      "timeLimitSeconds": 30,
+      "question": "You're about to code this up. Should you insert each number into the map BEFORE checking for its complement, or AFTER?",
+      "options": [
+        "Before — you need the full map populated to find any match",
+        "After — checking first then inserting prevents a number from matching with itself",
+        "It doesn't matter — both approaches give the same result",
+        "Before, but only if the array has no duplicates"
+      ],
+      "correctIndex": 1,
+      "explanation": "Check first, insert after. Otherwise on input like [3, 3] with target 6, the first 3 matches itself before the second one is even seen. Order of operations is the entire trick to a clean one-pass solution."
+    },
+    {
+      "id": 5,
+      "type": "edgeCase",
+      "timeLimitSeconds": 25,
+      "question": "Which input is most likely to expose a bug in a careless implementation?",
+      "options": [
+        "[1, 2, 3, 4, 5] with target 9",
+        "[-3, 4, 3, 90] with target 0",
+        "[3, 3] with target 6",
+        "[1000000, 999999] with target 1999999"
+      ],
+      "correctIndex": 2,
+      "explanation": "Duplicate values where both are needed for the pair. Implementations that populate the map before checking will match a number against itself or overwrite the first index."
+    }
+  ]
+}

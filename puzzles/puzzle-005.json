@@ -1,0 +1,84 @@
+{
+  "id": "puzzle-005",
+  "date": "2026-06-05",
+  "title": "Longest Substring Without Repeating Characters",
+  "baseProblem": {
+    "statement": "Given a string, find the length of the longest substring that contains no repeated characters.",
+    "example": {
+      "input": "abcabcbb",
+      "output": 3
+    }
+  },
+  "rounds": [
+    {
+      "id": 1,
+      "type": "principle",
+      "timeLimitSeconds": 20,
+      "question": "Which property of this problem makes a sliding window the right tool?",
+      "options": [
+        "The answer is always a contiguous substring with a constraint that can be checked incrementally",
+        "The input is sorted",
+        "The answer has overlapping subproblems",
+        "The problem has a fixed window size known in advance"
+      ],
+      "correctIndex": 0,
+      "explanation": "Sliding window fits when the answer is contiguous and the validity check (no duplicates here) can be maintained as the window grows or shrinks."
+    },
+    {
+      "id": 2,
+      "type": "approach",
+      "timeLimitSeconds": 25,
+      "question": "When the right pointer sees a character that's already in the window, what should the left pointer do?",
+      "options": [
+        "Move forward by one position",
+        "Reset all the way back to the start",
+        "Jump to the position just past the previous occurrence of that character",
+        "Stay put until the right pointer moves past the duplicate"
+      ],
+      "correctIndex": 2,
+      "explanation": "Jumping straight past the previous occurrence skips invalid windows in one step. Moving one at a time also works but is slower in the worst case."
+    },
+    {
+      "id": 3,
+      "type": "complexity",
+      "timeLimitSeconds": 20,
+      "question": "What's the time complexity when using a hash map to track character positions?",
+      "options": [
+        "O(log n)",
+        "O(n)",
+        "O(n log n)",
+        "O(n²)"
+      ],
+      "correctIndex": 1,
+      "explanation": "Each character is visited at most twice — once by the right pointer, once by the left. Total work is O(n)."
+    },
+    {
+      "id": 4,
+      "type": "ambiguity",
+      "timeLimitSeconds": 30,
+      "question": "The hash map stores the last index seen for each character. When you find a duplicate, can the left pointer ever move backwards based on the map?",
+      "options": [
+        "Yes — the map says jump to position 5, so set left = 5 regardless of where it was",
+        "No — the left pointer should only move forward; take max(left, mapIndex + 1)",
+        "Yes — but only if the duplicate is more than k positions away",
+        "It doesn't matter — the answer comes out the same either way"
+      ],
+      "correctIndex": 1,
+      "explanation": "If you don't clamp with max, a duplicate from outside the current window can drag the left pointer backwards and invalidate the count. Classic off-by-one bug."
+    },
+    {
+      "id": 5,
+      "type": "edgeCase",
+      "timeLimitSeconds": 25,
+      "question": "Which input is most likely to expose the bug from Round 4?",
+      "options": [
+        "\"\" (empty string)",
+        "\"abcdef\" (all unique)",
+        "\"abba\" (duplicate that's been left behind)",
+        "\"aaaaa\" (all same character)"
+      ],
+      "correctIndex": 2,
+      "explanation": "When right reaches the second 'a', the map says position 0 — but left is already at 2 after handling the 'b'. Without max-clamping, left drags backwards."
+    }
+  ]
+}
