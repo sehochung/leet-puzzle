@@ -5,7 +5,10 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "validate-puzzles": "node scripts/validate-puzzles.mjs",
+    "prebuild": "npm run validate-puzzles",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "next": "16.2.7",
