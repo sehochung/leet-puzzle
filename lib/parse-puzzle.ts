@@ -1,9 +1,16 @@
-import { type Puzzle, type Round, ROUND_TYPE_ORDER } from "./puzzle";
+import {
+  type Option,
+  type Puzzle,
+  type Round,
+  type TestCase,
+  STAGE_ORDER,
+} from "./puzzle";
 
 // Throws Error with a field-path message on any invalid input, e.g.
-//   "rounds[2].options: expected length 4, got 3"
-// No external libs — just assertions. This is the single runtime gate that
-// lets the rest of the app trust the Puzzle type.
+//   "rounds[2].options[1].fragments.java: expected non-empty string"
+// No external libs — just assertions. The single runtime gate that lets the rest
+// of the app trust the Puzzle type. Shape invariants mirror
+// scripts/validate-puzzles.mjs — keep the two in sync.
 
 function assert(cond: boolean, path: string, msg: string): asserts cond {
   if (!cond) throw new Error(`${path}: ${msg}`);
@@ -18,6 +25,12 @@ function str(v: unknown, path: string): string {
   return v;
 }
 
+function nonEmptyStr(v: unknown, path: string): string {
+  const s = str(v, path);
+  assert(s.length > 0, path, "expected non-empty string");
+  return s;
+}
+
 function num(v: unknown, path: string): number {
   assert(
     typeof v === "number" && Number.isFinite(v),
@@ -27,14 +40,49 @@ function num(v: unknown, path: string): number {
   return v;
 }
 
+function countOccurrences(haystack: string, needle: string): number {
+  let count = 0;
+  let i = haystack.indexOf(needle);
+  while (i !== -1) {
+    count++;
+    i = haystack.indexOf(needle, i + needle.length);
+  }
+  return count;
+}
+
+function parseScaffold(v: unknown, path: string): string {
+  const s = nonEmptyStr(v, path);
+  for (const stage of STAGE_ORDER) {
+    const n = countOccurrences(s, `{{${stage}}}`);
+    assert(n === 1, path, `expected exactly one {{${stage}}} marker, got ${n}`);
+  }
+  return s;
+}
+
+function parseOption(v: unknown, path: string): Option {
+  assert(isRecord(v), path, "expected object");
+  assert(isRecord(v.fragments), `${path}.fragments`, "expected object");
+  return {
+    conceptLabel: nonEmptyStr(v.conceptLabel, `${path}.conceptLabel`),
+    fragments: {
+      python: nonEmptyStr(v.fragments.python, `${path}.fragments.python`),
+      java: nonEmptyStr(v.fragments.java, `${path}.fragments.java`),
+    },
+    rationale: nonEmptyStr(v.rationale, `${path}.rationale`),
+  };
+}
+
 function parseRound(v: unknown, i: number): Round {
   const path = `rounds[${i}]`;
   assert(isRecord(v), path, "expected object");
 
-  const expectedType = ROUND_TYPE_ORDER[i];
-  assert(expectedType !== undefined, path, `unexpected round index ${i}`);
-  const type = str(v.type, `${path}.type`);
-  assert(type === expectedType, `${path}.type`, `expected "${expectedType}", got "${type}"`);
+  const expectedStage = STAGE_ORDER[i];
+  assert(expectedStage !== undefined, path, `unexpected round index ${i}`);
+  const stage = str(v.stage, `${path}.stage`);
+  assert(stage === expectedStage, `${path}.stage`, `expected "${expectedStage}", got "${stage}"`);
+
+  const id = num(v.id, `${path}.id`);
+  assert(id === i + 1, `${path}.id`, `expected ${i + 1}, got ${id}`);
 
   const options = v.options;
   assert(Array.isArray(options), `${path}.options`, "expected array");
@@ -48,19 +96,25 @@ function parseRound(v: unknown, i: number): Round {
   );
 
   return {
-    id: num(v.id, `${path}.id`),
-    type: expectedType,
-    timeLimitSeconds: num(v.timeLimitSeconds, `${path}.timeLimitSeconds`),
-    question: str(v.question, `${path}.question`),
+    id,
+    stage: expectedStage,
+    question: nonEmptyStr(v.question, `${path}.question`),
     options: [
-      str(options[0], `${path}.options[0]`),
-      str(options[1], `${path}.options[1]`),
-      str(options[2], `${path}.options[2]`),
-      str(options[3], `${path}.options[3]`),
+      parseOption(options[0], `${path}.options[0]`),
+      parseOption(options[1], `${path}.options[1]`),
+      parseOption(options[2], `${path}.options[2]`),
+      parseOption(options[3], `${path}.options[3]`),
     ],
     correctIndex: ci,
-    explanation: str(v.explanation, `${path}.explanation`),
   };
+}
+
+function parseTest(v: unknown, i: number): TestCase {
+  const path = `tests[${i}]`;
+  assert(isRecord(v), path, "expected object");
+  assert("input" in v, `${path}.input`, "missing");
+  assert("expected" in v, `${path}.expected`, "missing");
+  return { input: v.input, expected: v.expected };
 }
 
 export function parsePuzzle(data: unknown): Puzzle {
@@ -78,6 +132,15 @@ export function parsePuzzle(data: unknown): Puzzle {
   assert("input" in example, "baseProblem.example.input", "missing");
   assert("output" in example, "baseProblem.example.output", "missing");
 
+  const scaffolds = data.scaffolds;
+  assert(isRecord(scaffolds), "scaffolds", "expected object");
+  const canonical = data.canonicalSolutions;
+  assert(isRecord(canonical), "canonicalSolutions", "expected object");
+
+  const tests = data.tests;
+  assert(Array.isArray(tests), "tests", "expected array");
+  assert(tests.length > 0, "tests", "expected non-empty array");
+
   const rounds = data.rounds;
   assert(Array.isArray(rounds), "rounds", "expected array");
   assert(rounds.length === 5, "rounds", `expected length 5, got ${rounds.length}`);
@@ -85,11 +148,20 @@ export function parsePuzzle(data: unknown): Puzzle {
   return {
     id,
     date,
-    title: str(data.title, "title"),
+    title: nonEmptyStr(data.title, "title"),
     baseProblem: {
-      statement: str(bp.statement, "baseProblem.statement"),
+      statement: nonEmptyStr(bp.statement, "baseProblem.statement"),
       example: { input: example.input, output: example.output },
     },
+    scaffolds: {
+      python: parseScaffold(scaffolds.python, "scaffolds.python"),
+      java: parseScaffold(scaffolds.java, "scaffolds.java"),
+    },
+    canonicalSolutions: {
+      python: nonEmptyStr(canonical.python, "canonicalSolutions.python"),
+      java: nonEmptyStr(canonical.java, "canonicalSolutions.java"),
+    },
+    tests: tests.map((t, i) => parseTest(t, i)),
     rounds: [
       parseRound(rounds[0], 0),
       parseRound(rounds[1], 1),

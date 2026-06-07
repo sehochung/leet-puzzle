@@ -9,76 +9,220 @@
       "output": [0, 1]
     }
   },
+  "scaffolds": {
+    "python": "def solve(data):\n    nums, target = data[\"nums\"], data[\"target\"]\n    {{state}}\n    {{iterate}}\n        {{transform}}\n        {{update}}\n    return {{output}}",
+    "java": "import java.util.*;\nclass Solution {\n    static int[] solve(int[] nums, int target) {\n        {{state}}\n        {{iterate}}\n            {{transform}}\n            {{update}}\n        }\n        return {{output}};\n    }\n}"
+  },
+  "canonicalSolutions": {
+    "python": "def solve(data):\n    nums, target = data[\"nums\"], data[\"target\"]\n    seen = {}\n    for i, x in enumerate(nums):\n        need = target - x\n        if need in seen:\n            return [seen[need], i]\n        seen[x] = i\n    return []",
+    "java": "import java.util.*;\nclass Solution {\n    static int[] solve(int[] nums, int target) {\n        Map<Integer, Integer> seen = new HashMap<>();\n        for (int i = 0; i < nums.length; i++) {\n            int need = target - nums[i];\n            if (seen.containsKey(need)) return new int[]{seen.get(need), i};\n            seen.put(nums[i], i);\n        }\n        return new int[]{};\n    }\n}"
+  },
+  "tests": [
+    { "input": { "nums": [2, 7, 11, 15], "target": 9 }, "expected": [0, 1] },
+    { "input": { "nums": [3, 2, 4], "target": 6 }, "expected": [1, 2] },
+    { "input": { "nums": [3, 3], "target": 6 }, "expected": [0, 1] },
+    { "input": { "nums": [-1, -2, -3, -4, -5], "target": -8 }, "expected": [2, 4] }
+  ],
   "rounds": [
     {
       "id": 1,
-      "type": "principle",
-      "timeLimitSeconds": 20,
-      "question": "The brute force is O(n²): for each number, scan the rest of the array. What single change to that approach gets you to O(n)?",
+      "stage": "state",
+      "question": "What structure lets each element find its complement in O(1)?",
       "options": [
-        "Sort the array first to enable binary search for the second number",
-        "Replace the inner scan with a hash map lookup for the complement",
-        "Use two pointers moving from opposite ends of the array",
-        "Cache previously computed sums in an auxiliary array"
+        {
+          "conceptLabel": "A sorted copy of the array",
+          "fragments": {
+            "python": "pairs = sorted(range(len(nums)), key=lambda i: nums[i])",
+            "java": "Integer[] order = new Integer[nums.length];"
+          },
+          "rationale": "Sorting enables a two-pointer scan but costs O(n log n) and forces you to carry original indices through the sort — slower and more error-prone than a hash lookup."
+        },
+        {
+          "conceptLabel": "A hash map from value to its index",
+          "fragments": {
+            "python": "seen = {}",
+            "java": "Map<Integer, Integer> seen = new HashMap<>();"
+          },
+          "rationale": "Storing each value's index lets you check in O(1) whether the complement you need has already appeared — the heart of the one-pass solution."
+        },
+        {
+          "conceptLabel": "A set of values seen so far",
+          "fragments": {
+            "python": "seen = set()",
+            "java": "Set<Integer> seen = new HashSet<>();"
+          },
+          "rationale": "A set tells you the complement exists but not WHERE. The problem asks for indices, so you must map value to index."
+        },
+        {
+          "conceptLabel": "A running total of the elements",
+          "fragments": {
+            "python": "total = 0",
+            "java": "int total = 0;"
+          },
+          "rationale": "An aggregate sum is irrelevant — Two Sum is about pairwise complements, not a cumulative total."
+        }
       ],
-      "correctIndex": 1,
-      "explanation": "For each number x, you need to find target − x. A hash map lookup is O(1), so the total drops to O(n). Sorting destroys the original indices the problem asks for."
+      "correctIndex": 1
     },
     {
       "id": 2,
-      "type": "approach",
-      "timeLimitSeconds": 25,
-      "question": "What should the hash map store as you iterate?",
+      "stage": "iterate",
+      "question": "How do you scan so you hold both the value and its index?",
       "options": [
-        "Value → count of occurrences",
-        "Index → value",
-        "Value → index",
-        "Value → its complement (target − value)"
+        {
+          "conceptLabel": "Enumerate to get index and value together",
+          "fragments": {
+            "python": "for i, x in enumerate(nums):",
+            "java": "for (int i = 0; i < nums.length; i++) {"
+          },
+          "rationale": "You must return the index, so iterate with both the position and the value in hand."
+        },
+        {
+          "conceptLabel": "Iterate over the values only",
+          "fragments": {
+            "python": "for x in nums:",
+            "java": "for (int x : nums) {"
+          },
+          "rationale": "Without the index you cannot report WHERE the pair is — and the contract asks for indices, not values."
+        },
+        {
+          "conceptLabel": "Two nested loops over every pair",
+          "fragments": {
+            "python": "for i in range(len(nums)):\n            for j in range(i + 1, len(nums)):",
+            "java": "for (int i = 0; i < nums.length; i++) for (int j = i + 1; j < nums.length; j++) {"
+          },
+          "rationale": "The brute-force O(n^2) double loop works but throws away the whole point of the hash map — one pass suffices."
+        },
+        {
+          "conceptLabel": "Walk two pointers inward from both ends",
+          "fragments": {
+            "python": "lo, hi = 0, len(nums) - 1\n        while lo < hi:",
+            "java": "int lo = 0, hi = nums.length - 1; while (lo < hi) {"
+          },
+          "rationale": "Two-pointer needs a SORTED array; on the raw input the ends have no ordering relationship, so it can't reliably find the pair."
+        }
       ],
-      "correctIndex": 2,
-      "explanation": "You return indices, so when you find a complement you need to know where it was. Value → index gives you both lookup and the answer in one step."
+      "correctIndex": 0
     },
     {
       "id": 3,
-      "type": "complexity",
-      "timeLimitSeconds": 20,
-      "question": "What's the time complexity of the hash map approach in the average case?",
+      "stage": "transform",
+      "question": "For the current element x, what value completes the pair?",
       "options": [
-        "O(log n)",
-        "O(n)",
-        "O(n log n)",
-        "O(n²)"
+        {
+          "conceptLabel": "x itself",
+          "fragments": {
+            "python": "need = x",
+            "java": "int need = nums[i];"
+          },
+          "rationale": "Looking up x finds x, not its partner — you'd try to pair an element with a copy of itself."
+        },
+        {
+          "conceptLabel": "target plus x",
+          "fragments": {
+            "python": "need = target + x",
+            "java": "int need = target + nums[i];"
+          },
+          "rationale": "Addition overshoots: you want two numbers that SUM to target, so the partner is target minus x."
+        },
+        {
+          "conceptLabel": "target minus x, the complement",
+          "fragments": {
+            "python": "need = target - x",
+            "java": "int need = target - nums[i];"
+          },
+          "rationale": "If x + y = target then y = target - x, so the complement is exactly what completes the pair."
+        },
+        {
+          "conceptLabel": "target minus twice x",
+          "fragments": {
+            "python": "need = target - 2 * x",
+            "java": "int need = target - 2 * nums[i];"
+          },
+          "rationale": "This is right only when the two numbers are equal; in general it computes the wrong partner."
+        }
       ],
-      "correctIndex": 1,
-      "explanation": "Single pass through n elements, each doing an O(1) hash map lookup and insert. Total: O(n)."
+      "correctIndex": 2
     },
     {
       "id": 4,
-      "type": "ambiguity",
-      "timeLimitSeconds": 30,
-      "question": "You're about to code this up. Should you insert each number into the map BEFORE checking for its complement, or AFTER?",
+      "stage": "update",
+      "question": "What is the safe order of operations at each step?",
       "options": [
-        "Before — you need the full map populated to find any match",
-        "After — checking first then inserting prevents a number from matching with itself",
-        "It doesn't matter — both approaches give the same result",
-        "Before, but only if the array has no duplicates"
+        {
+          "conceptLabel": "Store x first, then check for the complement",
+          "fragments": {
+            "python": "seen[x] = i\n        if need in seen:\n            return [seen[need], i]",
+            "java": "seen.put(nums[i], i);\n            if (seen.containsKey(need)) return new int[]{seen.get(need), i};"
+          },
+          "rationale": "Storing before checking lets an element match itself when need == x, violating 'cannot use the same element twice'."
+        },
+        {
+          "conceptLabel": "Check for the complement first, then store x",
+          "fragments": {
+            "python": "if need in seen:\n            return [seen[need], i]\n        seen[x] = i",
+            "java": "if (seen.containsKey(need)) return new int[]{seen.get(need), i};\n            seen.put(nums[i], i);"
+          },
+          "rationale": "Checking before inserting guarantees the match is with an EARLIER element, so you never reuse the same index."
+        },
+        {
+          "conceptLabel": "Only store; never check inside the loop",
+          "fragments": {
+            "python": "seen[x] = i",
+            "java": "seen.put(nums[i], i);"
+          },
+          "rationale": "If you merely build the map you never detect the pair — the loop finishes having found nothing."
+        },
+        {
+          "conceptLabel": "Append x to a result list",
+          "fragments": {
+            "python": "result.append(x)",
+            "java": "result.add(nums[i]);"
+          },
+          "rationale": "Collecting values doesn't test the pair condition; it just copies the input."
+        }
       ],
-      "correctIndex": 1,
-      "explanation": "Check first, insert after. Otherwise on input like [3, 3] with target 6, the first 3 matches itself before the second one is even seen. Order of operations is the entire trick to a clean one-pass solution."
+      "correctIndex": 1
     },
     {
       "id": 5,
-      "type": "edgeCase",
-      "timeLimitSeconds": 25,
-      "question": "Which input is most likely to expose a bug in a careless implementation?",
+      "stage": "output",
+      "question": "The input guarantees one solution. What's the fallback return?",
       "options": [
-        "[1, 2, 3, 4, 5] with target 9",
-        "[-3, 4, 3, 90] with target 0",
-        "[3, 3] with target 6",
-        "[1000000, 999999] with target 1999999"
+        {
+          "conceptLabel": "An empty list — the not-found fallback",
+          "fragments": {
+            "python": "[]",
+            "java": "new int[]{}"
+          },
+          "rationale": "The guarantee means the loop returns early; an empty list is the conventional 'no pair' sentinel if it ever falls through."
+        },
+        {
+          "conceptLabel": "The seen map",
+          "fragments": {
+            "python": "seen",
+            "java": "seen"
+          },
+          "rationale": "Returning the lookup table leaks internals and isn't the index pair the contract requires."
+        },
+        {
+          "conceptLabel": "The last index",
+          "fragments": {
+            "python": "len(nums) - 1",
+            "java": "nums.length - 1"
+          },
+          "rationale": "A lone index is meaningless — the answer is a PAIR of indices."
+        },
+        {
+          "conceptLabel": "Null / None",
+          "fragments": {
+            "python": "None",
+            "java": "null"
+          },
+          "rationale": "A null sentinel forces every caller to guard a case the problem says can't happen; an empty list is cleaner."
+        }
       ],
-      "correctIndex": 2,
-      "explanation": "Duplicate values where both are needed for the pair. Implementations that populate the map before checking will match a number against itself or overwrite the first index."
+      "correctIndex": 0
     }
   ]
 }

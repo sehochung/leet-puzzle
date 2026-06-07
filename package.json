@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "validate-puzzles": "node scripts/validate-puzzles.mjs",
+    "test-puzzles": "node scripts/test-puzzles.mjs",
     "prebuild": "npm run validate-puzzles",
     "typecheck": "tsc --noEmit"
   },

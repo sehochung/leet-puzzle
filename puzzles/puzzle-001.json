@@ -9,76 +9,220 @@
       "output": [["eat", "tea", "ate"], ["tan", "nat"], ["bat"]]
     }
   },
+  "scaffolds": {
+    "python": "def solve(strings):\n    {{state}}\n    {{iterate}}\n        {{transform}}\n        {{update}}\n    return {{output}}",
+    "java": "import java.util.*;\nclass Solution {\n    static List<List<String>> solve(List<String> strings) {\n        {{state}}\n        {{iterate}}\n            {{transform}}\n            {{update}}\n        }\n        return {{output}};\n    }\n}"
+  },
+  "canonicalSolutions": {
+    "python": "def solve(strings):\n    groups = {}\n    for s in strings:\n        key = \"\".join(sorted(s))\n        groups.setdefault(key, []).append(s)\n    return list(groups.values())",
+    "java": "import java.util.*;\nclass Solution {\n    static List<List<String>> solve(List<String> strings) {\n        Map<String, List<String>> groups = new HashMap<>();\n        for (String s : strings) {\n            char[] c = s.toCharArray(); Arrays.sort(c); String key = new String(c);\n            groups.computeIfAbsent(key, k -> new ArrayList<>()).add(s);\n        }\n        return new ArrayList<>(groups.values());\n    }\n}"
+  },
+  "tests": [
+    { "input": ["eat", "tea", "tan", "ate", "nat", "bat"], "expected": [["eat", "tea", "ate"], ["tan", "nat"], ["bat"]] },
+    { "input": [""], "expected": [[""]] },
+    { "input": ["a"], "expected": [["a"]] },
+    { "input": ["abc", "bca", "cab", "xyz"], "expected": [["abc", "bca", "cab"], ["xyz"]] }
+  ],
   "rounds": [
     {
       "id": 1,
-      "type": "principle",
-      "timeLimitSeconds": 20,
-      "question": "Two strings are anagrams of each other iff which statement holds?",
+      "stage": "state",
+      "question": "What state should you set up before scanning the strings?",
       "options": [
-        "They have the same length and start with the same character",
-        "They contain the same set of distinct characters, ignoring counts",
-        "They contain the same characters with the same counts — equivalently, sorting them produces identical strings",
-        "One is a substring of the other"
+        {
+          "conceptLabel": "A hash map from canonical key to a list of strings",
+          "fragments": {
+            "python": "groups = {}",
+            "java": "Map<String, List<String>> groups = new HashMap<>();"
+          },
+          "rationale": "You need to collect strings that share a canonical form, so a map keyed by that form — each bucket holding the original strings — is exactly right."
+        },
+        {
+          "conceptLabel": "A flat result list",
+          "fragments": {
+            "python": "groups = []",
+            "java": "List<List<String>> groups = new ArrayList<>();"
+          },
+          "rationale": "A flat list has no key to group by, so for every string you'd re-scan it to find its group — turning a one-pass scan into O(n^2)."
+        },
+        {
+          "conceptLabel": "A set of strings already seen",
+          "fragments": {
+            "python": "seen = set()",
+            "java": "Set<String> seen = new HashSet<>();"
+          },
+          "rationale": "A set tracks membership, not grouping. It can dedupe but cannot tell you which strings are anagrams of each other."
+        },
+        {
+          "conceptLabel": "A global character counter",
+          "fragments": {
+            "python": "counts = {}",
+            "java": "Map<Character, Integer> counts = new HashMap<>();"
+          },
+          "rationale": "A single tally mixes every string's characters together, losing the per-string identity you need to form groups."
+        }
       ],
-      "correctIndex": 2,
-      "explanation": "Anagrams are permutations of each other, so they share a canonical form: either the sorted character sequence or the per-character count vector. Distinct sets miss counts ('aab' vs 'ab' both have set {a,b})."
+      "correctIndex": 0
     },
     {
       "id": 2,
-      "type": "approach",
-      "timeLimitSeconds": 25,
-      "question": "Given a canonical form for each string, what's the cleanest way to group them in one pass?",
+      "stage": "iterate",
+      "question": "How should you walk through the input?",
       "options": [
-        "Sort the input list by canonical form, then split into runs of equal keys",
-        "A hash map keyed by canonical form, with each value being the list of original strings",
-        "A trie built from each string's canonical form",
-        "A union-find that joins strings sharing a canonical form"
+        {
+          "conceptLabel": "Index over the list with a counter",
+          "fragments": {
+            "python": "for i in range(len(strings)):",
+            "java": "for (int i = 0; i < strings.size(); i++) {"
+          },
+          "rationale": "Index iteration works but is needless here — you never use the index, only the string value, so a direct loop is clearer and less error-prone."
+        },
+        {
+          "conceptLabel": "Iterate directly over each string",
+          "fragments": {
+            "python": "for s in strings:",
+            "java": "for (String s : strings) {"
+          },
+          "rationale": "You process each string independently, so a direct for-each is the clearest loop and reads exactly like the problem."
+        },
+        {
+          "conceptLabel": "Sort the strings first, then loop",
+          "fragments": {
+            "python": "for s in sorted(strings):",
+            "java": "for (String s : new TreeSet<>(strings)) {"
+          },
+          "rationale": "Pre-sorting adds an n*log n factor for no benefit, and a TreeSet silently drops duplicate strings — both wrong for this problem."
+        },
+        {
+          "conceptLabel": "Loop over the list in reverse",
+          "fragments": {
+            "python": "for s in reversed(strings):",
+            "java": "for (int i = strings.size() - 1; i >= 0; i--) {"
+          },
+          "rationale": "Reverse iteration only changes the order groups are built in; grouping is order-independent, so this just adds confusion."
+        }
       ],
-      "correctIndex": 1,
-      "explanation": "A hash map gives O(1) bucket lookup as you iterate, so you build all groups in a single pass. Sorting the outer list adds a needless n log n factor; trie and union-find solve harder problems than this one."
+      "correctIndex": 1
     },
     {
       "id": 3,
-      "type": "complexity",
-      "timeLimitSeconds": 20,
-      "question": "Using the sorted-string canonical key, what's the time complexity for n strings of max length k?",
+      "stage": "transform",
+      "question": "What canonical key identifies a string's anagram class?",
       "options": [
-        "O(n)",
-        "O(n × k)",
-        "O(n × k log k)",
-        "O(n²)"
+        {
+          "conceptLabel": "The string's length",
+          "fragments": {
+            "python": "key = len(s)",
+            "java": "int key = s.length();"
+          },
+          "rationale": "Length collides wildly — 'abc' and 'xyz' share length 3 but are not anagrams. Far too coarse a key."
+        },
+        {
+          "conceptLabel": "The set of distinct characters",
+          "fragments": {
+            "python": "key = frozenset(s)",
+            "java": "Set<Character> key = new HashSet<>(); for (char ch : s.toCharArray()) key.add(ch);"
+          },
+          "rationale": "A set ignores counts: 'aab' and 'ab' both map to {a,b} but are not anagrams. You must preserve character multiplicity."
+        },
+        {
+          "conceptLabel": "The characters sorted into a canonical string",
+          "fragments": {
+            "python": "key = \"\".join(sorted(s))",
+            "java": "char[] c = s.toCharArray(); Arrays.sort(c); String key = new String(c);"
+          },
+          "rationale": "Sorting the characters gives every anagram the identical canonical form, so equal keys mean anagrams. The classic O(k log k) key."
+        },
+        {
+          "conceptLabel": "The first and last character",
+          "fragments": {
+            "python": "key = (s[0], s[-1])",
+            "java": "String key = \"\" + s.charAt(0) + s.charAt(s.length() - 1);"
+          },
+          "rationale": "Endpoints ignore the middle entirely — 'abc' and 'axc' would collide. Not a faithful canonical form (and it crashes on empty strings)."
+        }
       ],
-      "correctIndex": 2,
-      "explanation": "Sorting each string is O(k log k); doing it for all n strings dominates. Hash map insert/lookup is O(k) for the key comparison, which is absorbed into the same term."
+      "correctIndex": 2
     },
     {
       "id": 4,
-      "type": "ambiguity",
-      "timeLimitSeconds": 30,
-      "question": "Your interviewer asks: 'Can you drop the log k factor?' What's the strongest answer?",
+      "stage": "update",
+      "question": "How do you place the string into its group?",
       "options": [
-        "No — sorting is inherent to forming a canonical key",
-        "Yes — use the tuple of character counts (length 26 for lowercase ASCII) as the key, giving O(n × k) total",
-        "Yes — use a frozenset of characters as the key, since anagrams share the same character set",
-        "Yes — switch from comparison sort to a different sort algorithm"
+        {
+          "conceptLabel": "Rebuild the bucket with the string appended",
+          "fragments": {
+            "python": "groups[key] = groups.get(key, []) + [s]",
+            "java": "List<String> b = groups.getOrDefault(key, new ArrayList<>()); b.add(s); groups.put(key, b);"
+          },
+          "rationale": "It works, but in Python rebuilding the bucket with + copies the whole list on every insert — O(n) per add, O(n^2) overall."
+        },
+        {
+          "conceptLabel": "Fetch-or-create the bucket, then append in place",
+          "fragments": {
+            "python": "groups.setdefault(key, []).append(s)",
+            "java": "groups.computeIfAbsent(key, k -> new ArrayList<>()).add(s);"
+          },
+          "rationale": "One amortized-O(1) step: get the bucket (creating it if absent) and append. Idiomatic and fast."
+        },
+        {
+          "conceptLabel": "Overwrite the bucket with the string",
+          "fragments": {
+            "python": "groups[key] = s",
+            "java": "groups.put(key, s);"
+          },
+          "rationale": "Assignment replaces the bucket, so each key keeps only the last string seen — you lose every earlier anagram."
+        },
+        {
+          "conceptLabel": "Append the key to a flat list",
+          "fragments": {
+            "python": "groups.append(key)",
+            "java": "groups.add(key);"
+          },
+          "rationale": "This treats groups as a flat list of keys, discarding the original strings and the grouping entirely."
+        }
       ],
-      "correctIndex": 1,
-      "explanation": "A fixed-size count vector is a canonical form you can build in O(k) without sorting. The frozenset answer is the trap — it loses multiplicity, so \"aab\" and \"ab\" would incorrectly collide. State the alphabet assumption out loud when you propose it."
+      "correctIndex": 1
     },
     {
       "id": 5,
-      "type": "edgeCase",
-      "timeLimitSeconds": 25,
-      "question": "Which input is most likely to expose a bug in a careless implementation?",
+      "stage": "output",
+      "question": "What do you return?",
       "options": [
-        "[\"abc\", \"bca\", \"cab\"] (three mutual anagrams)",
-        "[\"eat\", \"tea\", \"eat\"] (a duplicate string that's also an anagram of another)",
-        "[\"a\"] (single string)",
-        "[\"abc\", \"xyz\"] (no anagrams in the input)"
+        {
+          "conceptLabel": "The map's buckets as a list of groups",
+          "fragments": {
+            "python": "list(groups.values())",
+            "java": "new ArrayList<>(groups.values())"
+          },
+          "rationale": "Each value is exactly one anagram group; collecting the values yields the list-of-groups the problem asks for."
+        },
+        {
+          "conceptLabel": "The map itself",
+          "fragments": {
+            "python": "groups",
+            "java": "groups"
+          },
+          "rationale": "Returning the map leaks canonical keys the caller never asked for; the contract is a list of groups, not a keyed map."
+        },
+        {
+          "conceptLabel": "The map's keys",
+          "fragments": {
+            "python": "list(groups.keys())",
+            "java": "new ArrayList<>(groups.keySet())"
+          },
+          "rationale": "Keys are the canonical forms, not the original strings — you'd return sorted gibberish instead of the groups."
+        },
+        {
+          "conceptLabel": "A flattened list of all strings",
+          "fragments": {
+            "python": "[s for g in groups.values() for s in g]",
+            "java": "groups.values().stream().flatMap(List::stream).collect(java.util.stream.Collectors.toList())"
+          },
+          "rationale": "Flattening collapses the groups back into one list, throwing away exactly the grouping you just computed."
+        }
       ],
-      "correctIndex": 1,
-      "explanation": "The problem says group, not group distinct. Implementations that store each bucket as a set, or dedupe inputs before grouping, will collapse the two \"eat\"s. The expected output preserves input multiplicity: [[\"eat\", \"tea\", \"eat\"]]."
+      "correctIndex": 0
     }
   ]
 }

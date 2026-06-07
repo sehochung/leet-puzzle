@@ -1,41 +1,51 @@
-// Canonical puzzle schema. Tuple types enforce exactly-4-options and
-// exactly-5-rounds at the type level — no runtime length checks needed once a
-// value is typed as Puzzle. See parse-puzzle.ts for the runtime gate.
+// Puzzle schema for the code-construction mechanic. The player fills 5 named
+// slots (one per Stage, in STAGE_ORDER) of a language-specific scaffold by
+// picking one Option per round; all-correct picks compose into
+// canonicalSolutions exactly. Tuple types pin exactly-4-options and
+// exactly-5-rounds at the type level. See parse-puzzle.ts for the runtime gate.
 
-export type RoundType =
-  | "principle"
-  | "approach"
-  | "complexity"
-  | "ambiguity"
-  | "edgeCase";
+export type Stage = "state" | "iterate" | "transform" | "update" | "output";
 
-// Rounds always appear in this fixed order; index i must have type ORDER[i].
-export const ROUND_TYPE_ORDER: readonly RoundType[] = [
-  "principle",
-  "approach",
-  "complexity",
-  "ambiguity",
-  "edgeCase",
+// Every puzzle's rounds appear in this fixed order; round i fills STAGE_ORDER[i].
+export const STAGE_ORDER: readonly Stage[] = [
+  "state",
+  "iterate",
+  "transform",
+  "update",
+  "output",
 ] as const;
 
+export type Language = "python" | "java";
+
+export type Option = {
+  conceptLabel: string; // shown on the button, language-neutral
+  fragments: { python: string; java: string }; // both required, no nulls
+  rationale: string; // shown on reveal, language-neutral
+};
+
 export type Round = {
-  id: number;
-  type: RoundType;
-  timeLimitSeconds: number;
+  id: number; // 1..5
+  stage: Stage; // must equal STAGE_ORDER[id-1]
   question: string;
-  options: readonly [string, string, string, string];
+  options: readonly [Option, Option, Option, Option];
   correctIndex: 0 | 1 | 2 | 3;
-  explanation: string;
+};
+
+export type TestCase = {
+  input: unknown; // shape is per-puzzle
+  expected: unknown;
 };
 
 export type Puzzle = {
-  id: string;
-  date: string;
+  id: string; // /^puzzle-\d{3}$/
+  date: string; // YYYY-MM-DD
   title: string;
   baseProblem: {
     statement: string;
-    // input/output shapes vary per puzzle; the renderer adapts.
     example: { input: unknown; output: unknown };
   };
+  scaffolds: { python: string; java: string }; // templates with {{stage}} markers
+  canonicalSolutions: { python: string; java: string }; // what all-correct picks produce
+  tests: readonly TestCase[]; // >=1; validator runs canonical against these
   rounds: readonly [Round, Round, Round, Round, Round];
 };

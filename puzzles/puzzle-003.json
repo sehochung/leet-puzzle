@@ -9,76 +9,221 @@
       "output": true
     }
   },
+  "scaffolds": {
+    "python": "def solve(s):\n    {{state}}\n    {{iterate}}\n        {{transform}}\n        {{update}}\n    return {{output}}",
+    "java": "import java.util.*;\nclass Solution {\n    static boolean solve(String s) {\n        {{state}}\n        {{iterate}}\n            {{transform}}\n            {{update}}\n        }\n        return {{output}};\n    }\n}"
+  },
+  "canonicalSolutions": {
+    "python": "def solve(s):\n    cleaned = [c.lower() for c in s if c.isalnum()]\n    lo, hi = 0, len(cleaned) - 1\n    while lo < hi:\n        if cleaned[lo] != cleaned[hi]:\n            return False\n        lo += 1\n        hi -= 1\n    return True",
+    "java": "import java.util.*;\nclass Solution {\n    static boolean solve(String s) {\n        StringBuilder sb = new StringBuilder(); for (char c : s.toCharArray()) if (Character.isLetterOrDigit(c)) sb.append(Character.toLowerCase(c)); String cleaned = sb.toString(); int lo = 0, hi = cleaned.length() - 1;\n        while (lo < hi) {\n            if (cleaned.charAt(lo) != cleaned.charAt(hi)) return false;\n            lo++; hi--;\n        }\n        return true;\n    }\n}"
+  },
+  "tests": [
+    { "input": "A man, a plan, a canal: Panama", "expected": true },
+    { "input": "race a car", "expected": false },
+    { "input": "", "expected": true },
+    { "input": ".,", "expected": true },
+    { "input": "0P", "expected": false }
+  ],
   "rounds": [
     {
       "id": 1,
-      "type": "principle",
-      "timeLimitSeconds": 20,
-      "question": "You could reverse the cleaned string and compare it to the original. What's the main reason two pointers is preferred?",
+      "stage": "state",
+      "question": "What setup makes the comparison count only the characters that matter?",
       "options": [
-        "It avoids allocating a new string of the same size",
-        "It runs in O(log n) instead of O(n)",
-        "It handles Unicode correctly while reversal doesn't",
-        "It's the only approach that works on streams"
+        {
+          "conceptLabel": "Two pointers on the raw string",
+          "fragments": {
+            "python": "lo, hi = 0, len(s) - 1",
+            "java": "int lo = 0, hi = s.length() - 1;"
+          },
+          "rationale": "Comparing the raw string counts spaces and punctuation, so 'A man, a plan...' fails even though it is a valid palindrome. Normalize first."
+        },
+        {
+          "conceptLabel": "Reverse the whole string up front",
+          "fragments": {
+            "python": "rev = s[::-1]",
+            "java": "String rev = new StringBuilder(s).reverse().toString();"
+          },
+          "rationale": "Reversing without filtering still compares non-alphanumerics, and builds a second string instead of scanning in place."
+        },
+        {
+          "conceptLabel": "Filter to alphanumerics and lowercase, then two pointers",
+          "fragments": {
+            "python": "cleaned = [c.lower() for c in s if c.isalnum()]\n    lo, hi = 0, len(cleaned) - 1",
+            "java": "StringBuilder sb = new StringBuilder(); for (char c : s.toCharArray()) if (Character.isLetterOrDigit(c)) sb.append(Character.toLowerCase(c)); String cleaned = sb.toString(); int lo = 0, hi = cleaned.length() - 1;"
+          },
+          "rationale": "Normalizing once up front means the scan only ever sees the characters that count; the pointers then close in from both ends."
+        },
+        {
+          "conceptLabel": "Push every character onto a stack",
+          "fragments": {
+            "python": "stack = list(s)",
+            "java": "Deque<Character> stack = new ArrayDeque<>();"
+          },
+          "rationale": "A stack can reverse but, unfiltered, still compares punctuation; it is extra space for what two pointers do in place."
+        }
       ],
-      "correctIndex": 0,
-      "explanation": "Both approaches are O(n) time, but reversal needs O(n) extra space. Two pointers compares in place with O(1) extra space."
+      "correctIndex": 2
     },
     {
       "id": 2,
-      "type": "approach",
-      "timeLimitSeconds": 25,
-      "question": "How should the two pointers handle non-alphanumeric characters?",
+      "stage": "iterate",
+      "question": "How do you advance toward the middle?",
       "options": [
-        "Pre-clean the string first, then compare with two pointers",
-        "Skip them on the fly — advance the pointer past any non-alphanumeric character before comparing",
-        "Replace them with a placeholder character that matches itself",
-        "Throw an error if any are encountered"
+        {
+          "conceptLabel": "While the pointers have not crossed",
+          "fragments": {
+            "python": "while lo < hi:",
+            "java": "while (lo < hi) {"
+          },
+          "rationale": "You only need to compare until the pointers meet; each step settles one mirrored pair."
+        },
+        {
+          "conceptLabel": "For half the length, by count",
+          "fragments": {
+            "python": "for _ in range(len(cleaned) // 2):",
+            "java": "for (int k = 0; k < cleaned.length() / 2; k++) {"
+          },
+          "rationale": "Counting to n/2 works but you must still derive both indices each step; the pointer-driven while reads more directly."
+        },
+        {
+          "conceptLabel": "While lo is less than or equal to hi",
+          "fragments": {
+            "python": "while lo <= hi:",
+            "java": "while (lo <= hi) {"
+          },
+          "rationale": "When lo == hi you compare the middle character to itself — harmless but a wasted iteration and a hint of an off-by-one."
+        },
+        {
+          "conceptLabel": "Scan the cleaned string left to right",
+          "fragments": {
+            "python": "for c in cleaned:",
+            "java": "for (char c : cleaned.toCharArray()) {"
+          },
+          "rationale": "A one-directional scan has no symmetric partner to compare against; palindrome checking is inherently two-ended."
+        }
       ],
-      "correctIndex": 1,
-      "explanation": "Skipping on the fly preserves the O(1) space advantage. Pre-cleaning works but allocates a new string, which is what two pointers exists to avoid."
+      "correctIndex": 0
     },
     {
       "id": 3,
-      "type": "complexity",
-      "timeLimitSeconds": 20,
-      "question": "What's the time complexity of the two-pointer approach?",
+      "stage": "transform",
+      "question": "What check detects that it is NOT a palindrome?",
       "options": [
-        "O(log n)",
-        "O(n)",
-        "O(n log n)",
-        "O(n²)"
+        {
+          "conceptLabel": "Bail out when the characters are equal",
+          "fragments": {
+            "python": "if cleaned[lo] == cleaned[hi]:\n            return False",
+            "java": "if (cleaned.charAt(lo) == cleaned.charAt(hi)) return false;"
+          },
+          "rationale": "Inverted logic — equal characters are exactly what you WANT; you bail only on a mismatch."
+        },
+        {
+          "conceptLabel": "Bail out when the mirrored characters differ",
+          "fragments": {
+            "python": "if cleaned[lo] != cleaned[hi]:\n            return False",
+            "java": "if (cleaned.charAt(lo) != cleaned.charAt(hi)) return false;"
+          },
+          "rationale": "A single mismatched pair disproves a palindrome, so you can return immediately."
+        },
+        {
+          "conceptLabel": "Compare lo against the middle character",
+          "fragments": {
+            "python": "if cleaned[lo] != cleaned[len(cleaned) // 2]:\n            return False",
+            "java": "if (cleaned.charAt(lo) != cleaned.charAt(cleaned.length() / 2)) return false;"
+          },
+          "rationale": "The middle is not lo's mirror; palindromes mirror around the center, pairing lo with hi."
+        },
+        {
+          "conceptLabel": "Compare the sum of their char codes to zero",
+          "fragments": {
+            "python": "if ord(cleaned[lo]) + ord(cleaned[hi]) == 0:\n            return False",
+            "java": "if (cleaned.charAt(lo) + cleaned.charAt(hi) == 0) return false;"
+          },
+          "rationale": "Arithmetic on code points has nothing to do with character equality; this condition never fires correctly."
+        }
       ],
-      "correctIndex": 1,
-      "explanation": "Each pointer moves at most n times in total, so total work is bounded by 2n. Linear in the length of the string."
+      "correctIndex": 1
     },
     {
       "id": 4,
-      "type": "ambiguity",
-      "timeLimitSeconds": 30,
-      "question": "Your interviewer asks: 'Is an empty string a palindrome?' What's the right move?",
+      "stage": "update",
+      "question": "How do the pointers move each step?",
       "options": [
-        "Say no — there's nothing to compare",
-        "Say yes — vacuously true, two pointers handle it correctly with no iterations",
-        "Ask whether they want you to treat it as a special case or follow the natural definition",
-        "Refuse to answer until they clarify their definition of palindrome"
+        {
+          "conceptLabel": "Step lo forward and hi backward",
+          "fragments": {
+            "python": "lo += 1\n        hi -= 1",
+            "java": "lo++; hi--;"
+          },
+          "rationale": "Each iteration resolves the outermost pair, so both pointers move one step inward."
+        },
+        {
+          "conceptLabel": "Advance only lo",
+          "fragments": {
+            "python": "lo += 1",
+            "java": "lo++;"
+          },
+          "rationale": "Leaving hi fixed compares lo against the same end forever — the loop never converges correctly."
+        },
+        {
+          "conceptLabel": "Move both pointers forward",
+          "fragments": {
+            "python": "lo += 1\n        hi += 1",
+            "java": "lo++; hi++;"
+          },
+          "rationale": "Pushing both the same direction never meets in the middle; hi runs off the end."
+        },
+        {
+          "conceptLabel": "Jump the pointers by two",
+          "fragments": {
+            "python": "lo += 2\n        hi -= 2",
+            "java": "lo += 2; hi -= 2;"
+          },
+          "rationale": "Skipping characters ignores half the pairs, so a mismatch in a skipped position goes undetected."
+        }
       ],
-      "correctIndex": 2,
-      "explanation": "Both 'yes' and 'no' are defensible depending on convention. Asking shows you noticed the edge case AND that the answer depends on a spec decision, not your implementation."
+      "correctIndex": 0
     },
     {
       "id": 5,
-      "type": "edgeCase",
-      "timeLimitSeconds": 25,
-      "question": "Which input is most likely to expose a bug in the skip-on-the-fly approach?",
+      "stage": "output",
+      "question": "If the loop finds no mismatch, what is the result?",
       "options": [
-        "\"racecar\" (clean palindrome)",
-        "\"hello\" (clean non-palindrome)",
-        "\".,!?\" (only non-alphanumeric characters)",
-        "\"Aa\" (mixed case, no other characters)"
+        {
+          "conceptLabel": "False",
+          "fragments": {
+            "python": "False",
+            "java": "false"
+          },
+          "rationale": "Reaching the end means every pair matched — that IS a palindrome, so the answer is true."
+        },
+        {
+          "conceptLabel": "True",
+          "fragments": {
+            "python": "True",
+            "java": "true"
+          },
+          "rationale": "The loop only exits without returning when all mirrored pairs matched, which is exactly a palindrome."
+        },
+        {
+          "conceptLabel": "The cleaned string",
+          "fragments": {
+            "python": "cleaned",
+            "java": "cleaned"
+          },
+          "rationale": "The contract is a boolean; returning the string is the wrong type entirely."
+        },
+        {
+          "conceptLabel": "Whether the pointers met",
+          "fragments": {
+            "python": "lo == hi",
+            "java": "lo == hi"
+          },
+          "rationale": "That reports where the pointers stopped, not whether the string was a palindrome."
+        }
       ],
-      "correctIndex": 2,
-      "explanation": "If every character gets skipped, both pointers race past each other without ever comparing anything. Naive implementations infinite-loop or return false incorrectly here."
+      "correctIndex": 1
     }
   ]
 }

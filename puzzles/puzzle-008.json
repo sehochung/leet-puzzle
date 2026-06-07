@@ -9,76 +9,221 @@
       "output": 0
     }
   },
+  "scaffolds": {
+    "python": "def solve(nums):\n    {{state}}\n    {{iterate}}\n        {{transform}}\n        {{update}}\n    return {{output}}",
+    "java": "import java.util.*;\nclass Solution {\n    static int solve(int[] nums) {\n        {{state}}\n        {{iterate}}\n            {{transform}}\n            {{update}}\n        }\n        return {{output}};\n    }\n}"
+  },
+  "canonicalSolutions": {
+    "python": "def solve(nums):\n    lo, hi = 0, len(nums) - 1\n    while lo < hi:\n        mid = (lo + hi) // 2\n        if nums[mid] > nums[hi]:\n            lo = mid + 1\n        else:\n            hi = mid\n    return nums[lo]",
+    "java": "import java.util.*;\nclass Solution {\n    static int solve(int[] nums) {\n        int lo = 0, hi = nums.length - 1;\n        while (lo < hi) {\n            int mid = (lo + hi) / 2;\n            if (nums[mid] > nums[hi]) lo = mid + 1; else hi = mid;\n        }\n        return nums[lo];\n    }\n}"
+  },
+  "tests": [
+    { "input": [4, 5, 6, 7, 0, 1, 2], "expected": 0 },
+    { "input": [3, 4, 5, 1, 2], "expected": 1 },
+    { "input": [1], "expected": 1 },
+    { "input": [2, 1], "expected": 1 },
+    { "input": [1, 2, 3], "expected": 1 }
+  ],
   "rounds": [
     {
       "id": 1,
-      "type": "principle",
-      "timeLimitSeconds": 20,
-      "question": "What single comparison tells you which half of the array contains the minimum?",
+      "stage": "state",
+      "question": "What state for the search?",
       "options": [
-        "Compare nums[mid] to nums[0]",
-        "Compare nums[mid] to nums[right]",
-        "Compare nums[left] to nums[right]",
-        "Compare nums[mid] to nums[mid − 1]"
+        {
+          "conceptLabel": "A pointer and a running min",
+          "fragments": {
+            "python": "i = 0\n    best = nums[0]",
+            "java": "int i = 0; int best = nums[0];"
+          },
+          "rationale": "Scanning with a running min is the O(n) approach; binary search needs converging bounds, not a linear accumulator."
+        },
+        {
+          "conceptLabel": "Low and high bounds over the array",
+          "fragments": {
+            "python": "lo, hi = 0, len(nums) - 1",
+            "java": "int lo = 0, hi = nums.length - 1;"
+          },
+          "rationale": "The minimum sits at the rotation point; converging [lo, hi] bounds find it in O(log n)."
+        },
+        {
+          "conceptLabel": "Only the high bound",
+          "fragments": {
+            "python": "hi = len(nums) - 1",
+            "java": "int hi = nums.length - 1;"
+          },
+          "rationale": "You need both bounds to halve the range; one bound can't express which side to keep."
+        },
+        {
+          "conceptLabel": "A sorted copy of the array",
+          "fragments": {
+            "python": "nums = sorted(nums)",
+            "java": "int[] s = nums.clone(); Arrays.sort(s);"
+          },
+          "rationale": "Sorting is O(n log n) and trivially makes the first element the answer — but it defeats the O(log n) requirement."
+        }
       ],
-      "correctIndex": 1,
-      "explanation": "If nums[mid] > nums[right], the minimum is in the right half (the drop is on that side). Otherwise it's in the left half including mid."
+      "correctIndex": 1
     },
     {
       "id": 2,
-      "type": "approach",
-      "timeLimitSeconds": 25,
-      "question": "What's the loop's termination condition?",
+      "stage": "iterate",
+      "question": "What is the loop condition?",
       "options": [
-        "left < right — stop when pointers meet",
-        "left <= right — stop when pointers cross",
-        "nums[left] < nums[right] — stop when the range is sorted",
-        "When mid equals 0"
+        {
+          "conceptLabel": "While lo is strictly less than hi",
+          "fragments": {
+            "python": "while lo < hi:",
+            "java": "while (lo < hi) {"
+          },
+          "rationale": "Converge until a single element remains; that survivor is the minimum."
+        },
+        {
+          "conceptLabel": "While lo is less than or equal to hi",
+          "fragments": {
+            "python": "while lo <= hi:",
+            "java": "while (lo <= hi) {"
+          },
+          "rationale": "With hi = mid (not mid - 1) this never terminates — lo and hi can stick and loop forever."
+        },
+        {
+          "conceptLabel": "Once per index",
+          "fragments": {
+            "python": "for i in range(len(nums)):",
+            "java": "for (int i = 0; i < nums.length; i++) {"
+          },
+          "rationale": "A linear pass is O(n), abandoning the log-time goal."
+        },
+        {
+          "conceptLabel": "While the ends are out of order",
+          "fragments": {
+            "python": "while nums[lo] > nums[hi]:",
+            "java": "while (nums[lo] > nums[hi]) {"
+          },
+          "rationale": "On a non-rotated or already-converged range this never enters, returning a wrong early answer."
+        }
       ],
-      "correctIndex": 0,
-      "explanation": "When left and right meet, they both point at the minimum. Using <= overshoots and breaks the invariant."
+      "correctIndex": 0
     },
     {
       "id": 3,
-      "type": "complexity",
-      "timeLimitSeconds": 20,
-      "question": "What's the time complexity?",
+      "stage": "transform",
+      "question": "What do you compute each step?",
       "options": [
-        "O(1)",
-        "O(log n)",
-        "O(n)",
-        "O(n log n)"
+        {
+          "conceptLabel": "The midpoint of the end values",
+          "fragments": {
+            "python": "mid = (nums[lo] + nums[hi]) // 2",
+            "java": "int mid = (nums[lo] + nums[hi]) / 2;"
+          },
+          "rationale": "mid must be an INDEX; averaging values and then indexing is meaningless."
+        },
+        {
+          "conceptLabel": "The midpoint index",
+          "fragments": {
+            "python": "mid = (lo + hi) // 2",
+            "java": "int mid = (lo + hi) / 2;"
+          },
+          "rationale": "Halving the index range is the core of binary search."
+        },
+        {
+          "conceptLabel": "The midpoint, rounded up",
+          "fragments": {
+            "python": "mid = (lo + hi + 1) // 2",
+            "java": "int mid = (lo + hi + 1) / 2;"
+          },
+          "rationale": "The upper mid combined with the 'hi = mid' branch can stall progress; the lower mid pairs correctly with this comparison."
+        },
+        {
+          "conceptLabel": "A random index in range",
+          "fragments": {
+            "python": "import random\n        mid = random.randint(lo, hi)",
+            "java": "int mid = lo + new Random().nextInt(hi - lo + 1);"
+          },
+          "rationale": "A random probe destroys both the O(log n) guarantee and determinism."
+        }
       ],
-      "correctIndex": 1,
-      "explanation": "Standard binary search depth. The decision at each step is O(1)."
+      "correctIndex": 1
     },
     {
       "id": 4,
-      "type": "ambiguity",
-      "timeLimitSeconds": 30,
-      "question": "What if the array isn't rotated at all (e.g., [1, 2, 3, 4, 5])?",
+      "stage": "update",
+      "question": "How do you pick the half containing the minimum?",
       "options": [
-        "The algorithm fails — needs a separate code path",
-        "The algorithm works correctly because the comparison naturally directs left every iteration",
-        "You must detect this case first by checking if nums[0] < nums[n-1]",
-        "You must return nums[0] without entering the loop"
+        {
+          "conceptLabel": "If mid exceeds the high value go right, else keep mid",
+          "fragments": {
+            "python": "if nums[mid] > nums[hi]:\n            lo = mid + 1\n        else:\n            hi = mid",
+            "java": "if (nums[mid] > nums[hi]) lo = mid + 1; else hi = mid;"
+          },
+          "rationale": "nums[mid] > nums[hi] means the rotation (and the min) is to mid's right; otherwise the min is at mid or left, so keep mid."
+        },
+        {
+          "conceptLabel": "Compare mid to the low value instead",
+          "fragments": {
+            "python": "if nums[mid] > nums[lo]:\n            lo = mid + 1\n        else:\n            hi = mid",
+            "java": "if (nums[mid] > nums[lo]) lo = mid + 1; else hi = mid;"
+          },
+          "rationale": "Comparing to nums[lo] misclassifies an already-sorted left side, sending you away from the minimum."
+        },
+        {
+          "conceptLabel": "Always halve to the left",
+          "fragments": {
+            "python": "hi = mid",
+            "java": "hi = mid;"
+          },
+          "rationale": "Ignoring the comparison drives hi down even when the min is to the right, returning the wrong element."
+        },
+        {
+          "conceptLabel": "Exclude mid on the keep-left branch too",
+          "fragments": {
+            "python": "if nums[mid] > nums[hi]:\n            lo = mid + 1\n        else:\n            hi = mid - 1",
+            "java": "if (nums[mid] > nums[hi]) lo = mid + 1; else hi = mid - 1;"
+          },
+          "rationale": "hi = mid - 1 can skip over the minimum itself when mid is the min; you must keep mid as a candidate."
+        }
       ],
-      "correctIndex": 1,
-      "explanation": "An unrotated array is a rotation by zero. nums[mid] <= nums[right] holds throughout, so the search naturally walks left until pointers meet at index 0."
+      "correctIndex": 0
     },
     {
       "id": 5,
-      "type": "edgeCase",
-      "timeLimitSeconds": 25,
-      "question": "Which input most clearly tests whether your comparison choice is correct?",
+      "stage": "output",
+      "question": "What do you return?",
       "options": [
-        "[1] (single element)",
-        "[2, 1] (rotated by one, two elements)",
-        "[3, 4, 5, 1, 2] (typical rotation)",
-        "[1, 2, 3, 4, 5] (no rotation)"
+        {
+          "conceptLabel": "The element at lo",
+          "fragments": {
+            "python": "nums[lo]",
+            "java": "nums[lo]"
+          },
+          "rationale": "The loop converges lo and hi onto the rotation point, where the minimum lives."
+        },
+        {
+          "conceptLabel": "lo, the index",
+          "fragments": {
+            "python": "lo",
+            "java": "lo"
+          },
+          "rationale": "The problem asks for the minimum VALUE, not its index."
+        },
+        {
+          "conceptLabel": "The first element",
+          "fragments": {
+            "python": "nums[0]",
+            "java": "nums[0]"
+          },
+          "rationale": "Only correct for an unrotated array; after rotation the first element isn't the min."
+        },
+        {
+          "conceptLabel": "The element at mid",
+          "fragments": {
+            "python": "nums[mid]",
+            "java": "nums[mid]"
+          },
+          "rationale": "mid is the last probe, not necessarily the converged minimum position."
+        }
       ],
-      "correctIndex": 1,
-      "explanation": "Implementations that compare to nums[left] instead of nums[right] return the wrong answer here. Smallest case that distinguishes correct from incorrect logic."
+      "correctIndex": 0
     }
   ]
 }

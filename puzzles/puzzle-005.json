@@ -9,76 +9,221 @@
       "output": 3
     }
   },
+  "scaffolds": {
+    "python": "def solve(s):\n    {{state}}\n    {{iterate}}\n        {{transform}}\n        {{update}}\n    return {{output}}",
+    "java": "import java.util.*;\nclass Solution {\n    static int solve(String s) {\n        {{state}}\n        {{iterate}}\n            {{transform}}\n            {{update}}\n        }\n        return {{output}};\n    }\n}"
+  },
+  "canonicalSolutions": {
+    "python": "def solve(s):\n    last = {}\n    start = 0\n    best = 0\n    for i, c in enumerate(s):\n        if c in last and last[c] >= start:\n            start = last[c] + 1\n        last[c] = i\n        best = max(best, i - start + 1)\n    return best",
+    "java": "import java.util.*;\nclass Solution {\n    static int solve(String s) {\n        Map<Character, Integer> last = new HashMap<>(); int start = 0; int best = 0;\n        for (int i = 0; i < s.length(); i++) {\n            if (last.containsKey(s.charAt(i)) && last.get(s.charAt(i)) >= start) start = last.get(s.charAt(i)) + 1;\n            last.put(s.charAt(i), i); best = Math.max(best, i - start + 1);\n        }\n        return best;\n    }\n}"
+  },
+  "tests": [
+    { "input": "abcabcbb", "expected": 3 },
+    { "input": "bbbbb", "expected": 1 },
+    { "input": "pwwkew", "expected": 3 },
+    { "input": "", "expected": 0 },
+    { "input": "abba", "expected": 2 }
+  ],
   "rounds": [
     {
       "id": 1,
-      "type": "principle",
-      "timeLimitSeconds": 20,
-      "question": "Which property of this problem makes a sliding window the right tool?",
+      "stage": "state",
+      "question": "What state tracks the current no-repeat window?",
       "options": [
-        "The answer is always a contiguous substring with a constraint that can be checked incrementally",
-        "The input is sorted",
-        "The answer has overlapping subproblems",
-        "The problem has a fixed window size known in advance"
+        {
+          "conceptLabel": "Only a best-length counter",
+          "fragments": {
+            "python": "best = 0",
+            "java": "int best = 0;"
+          },
+          "rationale": "A length alone can't tell you WHERE the window starts, so you can't shrink it when a repeat appears."
+        },
+        {
+          "conceptLabel": "Last-seen index per char, window start, and best",
+          "fragments": {
+            "python": "last = {}\n    start = 0\n    best = 0",
+            "java": "Map<Character, Integer> last = new HashMap<>(); int start = 0; int best = 0;"
+          },
+          "rationale": "The last-seen map lets you jump the window start past a repeat in O(1), while best records the longest valid window."
+        },
+        {
+          "conceptLabel": "A set of characters in the window",
+          "fragments": {
+            "python": "window = set()\n    start = 0\n    best = 0",
+            "java": "Set<Character> window = new HashSet<>(); int start = 0; int best = 0;"
+          },
+          "rationale": "A set works for a sliding window, but you must then shrink one character at a time; storing last-seen indices lets you jump directly."
+        },
+        {
+          "conceptLabel": "A frequency count of the whole string",
+          "fragments": {
+            "python": "from collections import Counter\n    counts = Counter(s)",
+            "java": "Map<Character, Integer> counts = new HashMap<>();"
+          },
+          "rationale": "A global frequency table describes the entire string, not a moving window, and never reveals repeats within a range."
+        }
       ],
-      "correctIndex": 0,
-      "explanation": "Sliding window fits when the answer is contiguous and the validity check (no duplicates here) can be maintained as the window grows or shrinks."
+      "correctIndex": 1
     },
     {
       "id": 2,
-      "type": "approach",
-      "timeLimitSeconds": 25,
-      "question": "When the right pointer sees a character that's already in the window, what should the left pointer do?",
+      "stage": "iterate",
+      "question": "How do you scan the string?",
       "options": [
-        "Move forward by one position",
-        "Reset all the way back to the start",
-        "Jump to the position just past the previous occurrence of that character",
-        "Stay put until the right pointer moves past the duplicate"
+        {
+          "conceptLabel": "Enumerate index and character",
+          "fragments": {
+            "python": "for i, c in enumerate(s):",
+            "java": "for (int i = 0; i < s.length(); i++) {"
+          },
+          "rationale": "You need the index both to measure window length and to record each character's last-seen position."
+        },
+        {
+          "conceptLabel": "Iterate characters only",
+          "fragments": {
+            "python": "for c in s:",
+            "java": "for (char c : s.toCharArray()) {"
+          },
+          "rationale": "Without the index you can't compute the window length i - start + 1 or store positions."
+        },
+        {
+          "conceptLabel": "Nested loops over every substring",
+          "fragments": {
+            "python": "for i in range(len(s)):\n            for j in range(i, len(s)):",
+            "java": "for (int i = 0; i < s.length(); i++) for (int j = i; j < s.length(); j++) {"
+          },
+          "rationale": "Enumerating every substring is O(n^2) or worse; the sliding window does it in one pass."
+        },
+        {
+          "conceptLabel": "Iterate in reverse",
+          "fragments": {
+            "python": "for i in range(len(s) - 1, -1, -1):",
+            "java": "for (int i = s.length() - 1; i >= 0; i--) {"
+          },
+          "rationale": "Scanning backwards complicates the 'jump start past the last occurrence' logic for no benefit."
+        }
       ],
-      "correctIndex": 2,
-      "explanation": "Jumping straight past the previous occurrence skips invalid windows in one step. Moving one at a time also works but is slower in the worst case."
+      "correctIndex": 0
     },
     {
       "id": 3,
-      "type": "complexity",
-      "timeLimitSeconds": 20,
-      "question": "What's the time complexity when using a hash map to track character positions?",
+      "stage": "transform",
+      "question": "When the current char repeats inside the window, how do you react?",
       "options": [
-        "O(log n)",
-        "O(n)",
-        "O(n log n)",
-        "O(n²)"
+        {
+          "conceptLabel": "Reset the window start to zero",
+          "fragments": {
+            "python": "if c in last:\n            start = 0",
+            "java": "if (last.containsKey(s.charAt(i))) start = 0;"
+          },
+          "rationale": "Jumping start back to 0 reopens characters you already passed, breaking the no-repeat guarantee."
+        },
+        {
+          "conceptLabel": "Nudge start forward by one",
+          "fragments": {
+            "python": "if c in last:\n            start += 1",
+            "java": "if (last.containsKey(s.charAt(i))) start++;"
+          },
+          "rationale": "Moving start by one isn't enough — the previous occurrence may be far back; you must jump past it."
+        },
+        {
+          "conceptLabel": "Jump start past the previous occurrence, if it's inside the window",
+          "fragments": {
+            "python": "if c in last and last[c] >= start:\n            start = last[c] + 1",
+            "java": "if (last.containsKey(s.charAt(i)) && last.get(s.charAt(i)) >= start) start = last.get(s.charAt(i)) + 1;"
+          },
+          "rationale": "Moving start to last[c] + 1 evicts exactly the stale repeat; the 'inside the window' guard avoids dragging start backwards."
+        },
+        {
+          "conceptLabel": "Clear the whole last-seen map",
+          "fragments": {
+            "python": "if c in last:\n            last.clear()",
+            "java": "if (last.containsKey(s.charAt(i))) last.clear();"
+          },
+          "rationale": "Wiping all positions forgets characters still in the window, so later repeats go undetected."
+        }
       ],
-      "correctIndex": 1,
-      "explanation": "Each character is visited at most twice — once by the right pointer, once by the left. Total work is O(n)."
+      "correctIndex": 2
     },
     {
       "id": 4,
-      "type": "ambiguity",
-      "timeLimitSeconds": 30,
-      "question": "The hash map stores the last index seen for each character. When you find a duplicate, can the left pointer ever move backwards based on the map?",
+      "stage": "update",
+      "question": "What do you record at each character?",
       "options": [
-        "Yes — the map says jump to position 5, so set left = 5 regardless of where it was",
-        "No — the left pointer should only move forward; take max(left, mapIndex + 1)",
-        "Yes — but only if the duplicate is more than k positions away",
-        "It doesn't matter — the answer comes out the same either way"
+        {
+          "conceptLabel": "Update best but don't store the position",
+          "fragments": {
+            "python": "best = max(best, i - start + 1)",
+            "java": "best = Math.max(best, i - start + 1);"
+          },
+          "rationale": "Skipping last[c] = i means the next repeat of c can't be located, so the window won't shrink correctly."
+        },
+        {
+          "conceptLabel": "Store the last-seen position, then update best",
+          "fragments": {
+            "python": "last[c] = i\n        best = max(best, i - start + 1)",
+            "java": "last.put(s.charAt(i), i); best = Math.max(best, i - start + 1);"
+          },
+          "rationale": "Record where you saw c so a future repeat can jump the start, then update best with the current window length."
+        },
+        {
+          "conceptLabel": "Increment best every step",
+          "fragments": {
+            "python": "last[c] = i\n        best += 1",
+            "java": "last.put(s.charAt(i), i); best++;"
+          },
+          "rationale": "best is a maximum window length, not a running count; incrementing it ignores window shrinking."
+        },
+        {
+          "conceptLabel": "Assign best to the current window length",
+          "fragments": {
+            "python": "last[c] = i\n        best = i - start + 1",
+            "java": "last.put(s.charAt(i), i); best = i - start + 1;"
+          },
+          "rationale": "Assigning (not maxing) lets a later, shorter window overwrite a longer one already found."
+        }
       ],
-      "correctIndex": 1,
-      "explanation": "If you don't clamp with max, a duplicate from outside the current window can drag the left pointer backwards and invalidate the count. Classic off-by-one bug."
+      "correctIndex": 1
     },
     {
       "id": 5,
-      "type": "edgeCase",
-      "timeLimitSeconds": 25,
-      "question": "Which input is most likely to expose the bug from Round 4?",
+      "stage": "output",
+      "question": "What do you return?",
       "options": [
-        "\"\" (empty string)",
-        "\"abcdef\" (all unique)",
-        "\"abba\" (duplicate that's been left behind)",
-        "\"aaaaa\" (all same character)"
+        {
+          "conceptLabel": "The best window length",
+          "fragments": {
+            "python": "best",
+            "java": "best"
+          },
+          "rationale": "best is the longest no-repeat window seen — the answer."
+        },
+        {
+          "conceptLabel": "The final window length",
+          "fragments": {
+            "python": "len(s) - start",
+            "java": "s.length() - start"
+          },
+          "rationale": "The last window isn't necessarily the longest; you must track the maximum."
+        },
+        {
+          "conceptLabel": "The number of distinct characters",
+          "fragments": {
+            "python": "len(last)",
+            "java": "last.size()"
+          },
+          "rationale": "That's the count of distinct characters in the whole string, not the longest window."
+        },
+        {
+          "conceptLabel": "The string length",
+          "fragments": {
+            "python": "len(s)",
+            "java": "s.length()"
+          },
+          "rationale": "Only correct when the whole string has no repeats; in general it overstates the answer."
+        }
       ],
-      "correctIndex": 2,
-      "explanation": "When right reaches the second 'a', the map says position 0 — but left is already at 2 after handling the 'b'. Without max-clamping, left drags backwards."
+      "correctIndex": 0
     }
   ]
 }

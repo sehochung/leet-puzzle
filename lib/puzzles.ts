@@ -5,11 +5,14 @@ import type { Puzzle } from "./puzzle";
 
 const PUZZLES_DIR = join(process.cwd(), "puzzles");
 const ID_RE = /^puzzle-\d{3}$/;
+// Top-level puzzle files only. readdir is non-recursive, so puzzles/legacy/ is
+// already excluded; matching this pattern makes that explicit and skips strays.
+const ID_FILE_RE = /^puzzle-\d{3}\.json$/;
 
 // Loads every puzzle. A single malformed file is collected into `errors`
 // instead of throwing, so the list page can degrade gracefully.
 export async function loadAllPuzzles(): Promise<{ puzzles: Puzzle[]; errors: string[] }> {
-  const files = (await readdir(PUZZLES_DIR)).filter((f) => f.endsWith(".json")).sort();
+  const files = (await readdir(PUZZLES_DIR)).filter((f) => ID_FILE_RE.test(f)).sort();
   const puzzles: Puzzle[] = [];
   const errors: string[] = [];
   for (const file of files) {

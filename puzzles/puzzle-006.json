@@ -9,76 +9,220 @@
       "output": "BANC"
     }
   },
+  "scaffolds": {
+    "python": "def solve(data):\n    s, t = data[\"s\"], data[\"t\"]\n    {{state}}\n    {{iterate}}\n        {{transform}}\n        {{update}}\n    return {{output}}",
+    "java": "import java.util.*;\nclass Solution {\n    static String solve(String s, String t) {\n        {{state}}\n        {{iterate}}\n            {{transform}}\n            {{update}}\n        }\n        return {{output}};\n    }\n}"
+  },
+  "canonicalSolutions": {
+    "python": "def solve(data):\n    s, t = data[\"s\"], data[\"t\"]\n    from collections import Counter\n    need = Counter(t)\n    missing = len(t)\n    left = 0\n    best = \"\"\n    for right, c in enumerate(s):\n        if need[c] > 0:\n            missing -= 1\n        need[c] -= 1\n        while missing == 0:\n            if best == \"\" or right - left + 1 < len(best):\n                best = s[left:right + 1]\n            need[s[left]] += 1\n            if need[s[left]] > 0:\n                missing += 1\n            left += 1\n    return best",
+    "java": "import java.util.*;\nclass Solution {\n    static String solve(String s, String t) {\n        Map<Character, Integer> need = new HashMap<>(); for (char c : t.toCharArray()) need.merge(c, 1, Integer::sum); int missing = t.length(); int left = 0; String best = \"\";\n        for (int right = 0; right < s.length(); right++) {\n            char c = s.charAt(right); if (need.getOrDefault(c, 0) > 0) missing--; need.merge(c, -1, Integer::sum);\n            while (missing == 0) {\n                if (best.isEmpty() || right - left + 1 < best.length()) best = s.substring(left, right + 1);\n                char l = s.charAt(left); need.merge(l, 1, Integer::sum);\n                if (need.get(l) > 0) missing++;\n                left++;\n            }\n        }\n        return best;\n    }\n}"
+  },
+  "tests": [
+    { "input": { "s": "ADOBECODEBANC", "t": "ABC" }, "expected": "BANC" },
+    { "input": { "s": "a", "t": "a" }, "expected": "a" },
+    { "input": { "s": "a", "t": "aa" }, "expected": "" },
+    { "input": { "s": "ab", "t": "b" }, "expected": "b" }
+  ],
   "rounds": [
     {
       "id": 1,
-      "type": "principle",
-      "timeLimitSeconds": 20,
-      "question": "What two phases does each iteration of the sliding window perform?",
+      "stage": "state",
+      "question": "What bookkeeping lets you test the window in O(1)?",
       "options": [
-        "Expand right until valid, then shrink left while still valid",
-        "Shrink left until invalid, then expand right",
-        "Expand both pointers at the same time",
-        "Binary search for the answer length, then verify"
+        {
+          "conceptLabel": "A set of t's characters",
+          "fragments": {
+            "python": "need = set(t)\n    left = 0\n    best = \"\"",
+            "java": "Set<Character> need = new HashSet<>(); for (char c : t.toCharArray()) need.add(c); int left = 0; String best = \"\";"
+          },
+          "rationale": "A set ignores duplicate requirements — t='AABC' needs two A's, which a set can't represent."
+        },
+        {
+          "conceptLabel": "Needed counts, a missing total, left, and best",
+          "fragments": {
+            "python": "from collections import Counter\n    need = Counter(t)\n    missing = len(t)\n    left = 0\n    best = \"\"",
+            "java": "Map<Character, Integer> need = new HashMap<>(); for (char c : t.toCharArray()) need.merge(c, 1, Integer::sum); int missing = t.length(); int left = 0; String best = \"\";"
+          },
+          "rationale": "The count map plus one 'missing' total lets you test validity in O(1) instead of rescanning t every step."
+        },
+        {
+          "conceptLabel": "Only the two pointers",
+          "fragments": {
+            "python": "left = 0\n    best = \"\"",
+            "java": "int left = 0; String best = \"\";"
+          },
+          "rationale": "Pointers alone don't tell you whether the window covers t; you need per-character counts."
+        },
+        {
+          "conceptLabel": "A boolean 'found' flag",
+          "fragments": {
+            "python": "found = False\n    best = \"\"",
+            "java": "boolean found = false; String best = \"\";"
+          },
+          "rationale": "A flag can't measure HOW MANY required characters are still missing, so you can't know when to contract."
+        }
       ],
-      "correctIndex": 0,
-      "explanation": "Expand to satisfy the requirement, shrink to find the minimum that still satisfies it. Repeat until the right pointer reaches the end."
+      "correctIndex": 1
     },
     {
       "id": 2,
-      "type": "approach",
-      "timeLimitSeconds": 25,
-      "question": "What's the cleanest way to track whether the current window contains all required characters?",
+      "stage": "iterate",
+      "question": "How do you grow the window?",
       "options": [
-        "Count of distinct characters matched, compared against the number of distinct characters in t",
-        "Total count of characters in the window compared against length of t",
-        "Whether the window's character set equals t's character set",
-        "Whether every character in t appears in the window at least once"
+        {
+          "conceptLabel": "Advance the right edge over each character of s",
+          "fragments": {
+            "python": "for right, c in enumerate(s):",
+            "java": "for (int right = 0; right < s.length(); right++) {"
+          },
+          "rationale": "Expand by sweeping right across s; contraction from the left happens separately inside."
+        },
+        {
+          "conceptLabel": "Iterate over t",
+          "fragments": {
+            "python": "for c in t:",
+            "java": "for (char c : t.toCharArray()) {"
+          },
+          "rationale": "You search within s; iterating t doesn't move through the string you're scanning."
+        },
+        {
+          "conceptLabel": "Nested loops over every substring",
+          "fragments": {
+            "python": "for i in range(len(s)):\n            for j in range(i, len(s)):",
+            "java": "for (int i = 0; i < s.length(); i++) for (int j = i; j < s.length(); j++) {"
+          },
+          "rationale": "Checking every substring is O(n^2) windows times O(t) each; the two-pointer window is linear."
+        },
+        {
+          "conceptLabel": "Iterate characters without the index",
+          "fragments": {
+            "python": "for c in s:",
+            "java": "for (char c : s.toCharArray()) {"
+          },
+          "rationale": "You need right's index to slice the best window s[left:right + 1]."
+        }
       ],
-      "correctIndex": 0,
-      "explanation": "A counter of 'how many required characters have hit their target count' lets you check validity in O(1). Comparing sets or full counts each step is O(k) per check."
+      "correctIndex": 0
     },
     {
       "id": 3,
-      "type": "complexity",
-      "timeLimitSeconds": 20,
-      "question": "What's the time complexity of the optimal sliding window solution?",
+      "stage": "transform",
+      "question": "How do you fold the new right-edge character into the counts?",
       "options": [
-        "O(s log t)",
-        "O(s + t)",
-        "O(s × t)",
-        "O(s²)"
+        {
+          "conceptLabel": "Increment the count for c",
+          "fragments": {
+            "python": "need[c] += 1",
+            "java": "need.merge(c, 1, Integer::sum);"
+          },
+          "rationale": "You're consuming a required character, so its outstanding need goes DOWN, not up."
+        },
+        {
+          "conceptLabel": "Decrement c's count but never touch missing",
+          "fragments": {
+            "python": "need[c] -= 1",
+            "java": "need.merge(c, -1, Integer::sum);"
+          },
+          "rationale": "Without lowering 'missing' when you cover a needed char, the contraction loop never triggers."
+        },
+        {
+          "conceptLabel": "If c was still needed drop missing, then decrement its count",
+          "fragments": {
+            "python": "if need[c] > 0:\n            missing -= 1\n        need[c] -= 1",
+            "java": "char c = s.charAt(right); if (need.getOrDefault(c, 0) > 0) missing--; need.merge(c, -1, Integer::sum);"
+          },
+          "rationale": "'missing' counts outstanding required characters; it falls only when you consume one that was actually still needed."
+        },
+        {
+          "conceptLabel": "Reset c's count to zero",
+          "fragments": {
+            "python": "need[c] = 0",
+            "java": "need.put(c, 0);"
+          },
+          "rationale": "Zeroing loses how many of c you've seen beyond the requirement, breaking the contraction's restore step."
+        }
       ],
-      "correctIndex": 1,
-      "explanation": "Each character in s is visited at most twice (once by each pointer), and t is processed once for the target counts. Linear in the combined length."
+      "correctIndex": 2
     },
     {
       "id": 4,
-      "type": "ambiguity",
-      "timeLimitSeconds": 30,
-      "question": "If t contains a character twice (e.g., t = \"AABC\"), what does the window need to do?",
+      "stage": "update",
+      "question": "Once the window is valid, how do you contract from the left?",
       "options": [
-        "Find at least one of that character anywhere in s",
-        "Find at least two of that character in the window simultaneously",
-        "Find that character exactly twice — no more, no less",
-        "Find that character once if and only if it's already in the window"
+        {
+          "conceptLabel": "While valid, record the shortest and shrink, restoring counts",
+          "fragments": {
+            "python": "while missing == 0:\n            if best == \"\" or right - left + 1 < len(best):\n                best = s[left:right + 1]\n            need[s[left]] += 1\n            if need[s[left]] > 0:\n                missing += 1\n            left += 1",
+            "java": "while (missing == 0) {\n                if (best.isEmpty() || right - left + 1 < best.length()) best = s.substring(left, right + 1);\n                char l = s.charAt(left); need.merge(l, 1, Integer::sum);\n                if (need.get(l) > 0) missing++;\n                left++;\n            }"
+          },
+          "rationale": "While missing == 0 the window still covers t, so record the shortest seen and keep dropping left chars until it no longer does."
+        },
+        {
+          "conceptLabel": "Record best once, don't loop",
+          "fragments": {
+            "python": "if best == \"\" or right - left + 1 < len(best):\n            best = s[left:right + 1]",
+            "java": "if (best.isEmpty() || right - left + 1 < best.length()) best = s.substring(left, right + 1);"
+          },
+          "rationale": "Contracting only once leaves a needlessly long window; keep shrinking while it stays valid to reach the minimum."
+        },
+        {
+          "conceptLabel": "Jump left all the way to right",
+          "fragments": {
+            "python": "if missing == 0:\n            best = s[left:right + 1]\n            left = right",
+            "java": "if (missing == 0) { best = s.substring(left, right + 1); left = right; }"
+          },
+          "rationale": "Snapping left to right discards characters that might still form a shorter valid window, and corrupts the counts."
+        },
+        {
+          "conceptLabel": "Shrink without restoring the counts",
+          "fragments": {
+            "python": "while missing == 0:\n            best = s[left:right + 1]\n            left += 1",
+            "java": "while (missing == 0) { best = s.substring(left, right + 1); left++; }"
+          },
+          "rationale": "Moving left without incrementing need[s[left]] back leaves the counts wrong, so 'missing' never rises and the loop spins forever."
+        }
       ],
-      "correctIndex": 1,
-      "explanation": "Duplicates in t mean duplicate requirements. The window must contain each character at least as many times as t does, not just the distinct set."
+      "correctIndex": 0
     },
     {
       "id": 5,
-      "type": "edgeCase",
-      "timeLimitSeconds": 25,
-      "question": "Which input is most likely to expose a bug?",
+      "stage": "output",
+      "question": "What do you return?",
       "options": [
-        "s = \"a\", t = \"a\" (trivial match)",
-        "s = \"a\", t = \"aa\" (t requires more than s contains)",
-        "s = \"abc\", t = \"d\" (no match exists)",
-        "s = \"abcdef\", t = \"abc\" (match at the start)"
+        {
+          "conceptLabel": "The best window string",
+          "fragments": {
+            "python": "best",
+            "java": "best"
+          },
+          "rationale": "best holds the shortest valid window seen (or '' if none) — exactly the contract."
+        },
+        {
+          "conceptLabel": "The best window length",
+          "fragments": {
+            "python": "len(best)",
+            "java": "best.length()"
+          },
+          "rationale": "The problem asks for the substring itself, not its length."
+        },
+        {
+          "conceptLabel": "The left and right indices",
+          "fragments": {
+            "python": "[left, right]",
+            "java": "new int[]{left, right}"
+          },
+          "rationale": "Returning indices (and the loop-final ones at that) doesn't match the required substring return."
+        },
+        {
+          "conceptLabel": "Whether a window was found",
+          "fragments": {
+            "python": "best != \"\"",
+            "java": "!best.isEmpty()"
+          },
+          "rationale": "A boolean loses the actual substring the caller needs."
+        }
       ],
-      "correctIndex": 1,
-      "explanation": "Implementations that only check distinct characters will incorrectly return \"a\" instead of empty string. Tests whether your counter respects multiplicity."
+      "correctIndex": 0
     }
   ]
 }

@@ -9,76 +9,221 @@
       "output": 5
     }
   },
+  "scaffolds": {
+    "python": "def solve(n):\n    {{state}}\n    {{iterate}}\n        {{transform}}\n        {{update}}\n    return {{output}}",
+    "java": "import java.util.*;\nclass Solution {\n    static int solve(int n) {\n        {{state}}\n        {{iterate}}\n            {{transform}}\n            {{update}}\n        }\n        return {{output}};\n    }\n}"
+  },
+  "canonicalSolutions": {
+    "python": "def solve(n):\n    a, b = 1, 1\n    for _ in range(n):\n        nxt = a + b\n        a, b = b, nxt\n    return a",
+    "java": "import java.util.*;\nclass Solution {\n    static int solve(int n) {\n        int a = 1, b = 1;\n        for (int k = 0; k < n; k++) {\n            int nxt = a + b;\n            a = b; b = nxt;\n        }\n        return a;\n    }\n}"
+  },
+  "tests": [
+    { "input": 4, "expected": 5 },
+    { "input": 2, "expected": 2 },
+    { "input": 1, "expected": 1 },
+    { "input": 5, "expected": 8 },
+    { "input": 0, "expected": 1 }
+  ],
   "rounds": [
     {
       "id": 1,
-      "type": "principle",
-      "timeLimitSeconds": 20,
-      "question": "Why does ways(n) = ways(n−1) + ways(n−2)?",
+      "stage": "state",
+      "question": "What state captures the recurrence ways(i) = ways(i-1) + ways(i-2)?",
       "options": [
-        "Because the staircase has exactly two sides",
-        "Because the last step taken was either a 1-step (from n−1) or a 2-step (from n−2), and those are disjoint paths",
-        "Because you alternate 1-steps and 2-steps",
-        "Because n is always even or odd"
+        {
+          "conceptLabel": "A single running total",
+          "fragments": {
+            "python": "total = 0",
+            "java": "int total = 0;"
+          },
+          "rationale": "Each step needs the two PREVIOUS counts; a lone total can't reconstruct ways(i-1) and ways(i-2)."
+        },
+        {
+          "conceptLabel": "A full DP array of size n",
+          "fragments": {
+            "python": "dp = [0] * (n + 1)\n    dp[0] = 1",
+            "java": "int[] dp = new int[n + 1]; dp[0] = 1;"
+          },
+          "rationale": "This works but uses O(n) memory; only the last two values are ever needed, so two scalars suffice."
+        },
+        {
+          "conceptLabel": "The two most recent counts",
+          "fragments": {
+            "python": "a, b = 1, 1",
+            "java": "int a = 1, b = 1;"
+          },
+          "rationale": "ways(i) depends only on the prior two counts, so two rolling variables seeded at the base cases are enough."
+        },
+        {
+          "conceptLabel": "A stack of step choices",
+          "fragments": {
+            "python": "stack = [n]",
+            "java": "Deque<Integer> stack = new ArrayDeque<>(); stack.push(n);"
+          },
+          "rationale": "Enumerating choices explores exponentially many paths — exactly the brute force the DP exists to avoid."
+        }
       ],
-      "correctIndex": 1,
-      "explanation": "Every path to n ends with either a 1-step or a 2-step. Counting separately and summing covers all paths without double-counting."
+      "correctIndex": 2
     },
     {
       "id": 2,
-      "type": "approach",
-      "timeLimitSeconds": 25,
-      "question": "What's the most space-efficient way to compute ways(n) iteratively?",
+      "stage": "iterate",
+      "question": "How many times do you advance the recurrence?",
       "options": [
-        "Build a full array of size n+1 and read array[n] at the end",
-        "Recurse with memoization in a hash map",
-        "Track only the previous two values and roll forward",
-        "Compute using the closed-form Fibonacci formula"
+        {
+          "conceptLabel": "n times",
+          "fragments": {
+            "python": "for _ in range(n):",
+            "java": "for (int k = 0; k < n; k++) {"
+          },
+          "rationale": "Each iteration advances the window one stair; after n steps the rolling value holds ways(n)."
+        },
+        {
+          "conceptLabel": "n - 1 times",
+          "fragments": {
+            "python": "for _ in range(n - 1):",
+            "java": "for (int k = 0; k < n - 1; k++) {"
+          },
+          "rationale": "One step short leaves the answer at ways(n-1), an off-by-one — and it breaks for n = 0."
+        },
+        {
+          "conceptLabel": "n + 1 times",
+          "fragments": {
+            "python": "for _ in range(n + 1):",
+            "java": "for (int k = 0; k < n + 1; k++) {"
+          },
+          "rationale": "One step too many advances past ways(n) to ways(n+1)."
+        },
+        {
+          "conceptLabel": "Until the count exceeds n",
+          "fragments": {
+            "python": "while a <= n:",
+            "java": "while (a <= n) {"
+          },
+          "rationale": "The loop should count STEPS, not compare the running count to n — they're unrelated quantities."
+        }
       ],
-      "correctIndex": 2,
-      "explanation": "You only ever need the last two values to compute the next. O(1) space, no array needed."
+      "correctIndex": 0
     },
     {
       "id": 3,
-      "type": "complexity",
-      "timeLimitSeconds": 20,
-      "question": "What's the time complexity of the iterative O(1)-space approach?",
+      "stage": "transform",
+      "question": "What is the next count?",
       "options": [
-        "O(1)",
-        "O(log n)",
-        "O(n)",
-        "O(2ⁿ)"
+        {
+          "conceptLabel": "The product of the two counts",
+          "fragments": {
+            "python": "nxt = a * b",
+            "java": "int nxt = a * b;"
+          },
+          "rationale": "The recurrence ADDS the two previous counts; multiplying has no combinatorial meaning here."
+        },
+        {
+          "conceptLabel": "The sum of the two previous counts",
+          "fragments": {
+            "python": "nxt = a + b",
+            "java": "int nxt = a + b;"
+          },
+          "rationale": "Ways to reach a stair = ways arriving by a 1-step + ways arriving by a 2-step = the two previous counts summed."
+        },
+        {
+          "conceptLabel": "One more than the latest count",
+          "fragments": {
+            "python": "nxt = b + 1",
+            "java": "int nxt = b + 1;"
+          },
+          "rationale": "That grows linearly; the count grows like Fibonacci, needing both predecessors."
+        },
+        {
+          "conceptLabel": "Double the latest count",
+          "fragments": {
+            "python": "nxt = 2 * b",
+            "java": "int nxt = 2 * b;"
+          },
+          "rationale": "Doubling overcounts — it assumes every step has two independent successors, which isn't the stair recurrence."
+        }
       ],
-      "correctIndex": 2,
-      "explanation": "One pass from 2 to n, constant work per step. Total: O(n)."
+      "correctIndex": 1
     },
     {
       "id": 4,
-      "type": "ambiguity",
-      "timeLimitSeconds": 30,
-      "question": "A teammate says: 'Just use recursion — ways(n) = ways(n−1) + ways(n−2).' What's the problem with that as written?",
+      "stage": "update",
+      "question": "How do you roll the window forward?",
       "options": [
-        "Recursion is forbidden in production code",
-        "Without memoization it recomputes the same subproblems exponentially many times — O(2ⁿ)",
-        "Recursion can't compute Fibonacci-like sequences correctly",
-        "The base case is ambiguous"
+        {
+          "conceptLabel": "Shift b into a, and nxt into b",
+          "fragments": {
+            "python": "a, b = b, nxt",
+            "java": "a = b; b = nxt;"
+          },
+          "rationale": "The old 'next-previous' becomes the new previous, and the freshly computed count becomes the new next."
+        },
+        {
+          "conceptLabel": "Set both to nxt",
+          "fragments": {
+            "python": "a, b = nxt, nxt",
+            "java": "a = nxt; b = nxt;"
+          },
+          "rationale": "Collapsing both rolling values loses ways(i-1), so the next sum is wrong."
+        },
+        {
+          "conceptLabel": "Advance only b",
+          "fragments": {
+            "python": "b = nxt",
+            "java": "b = nxt;"
+          },
+          "rationale": "Leaving a unchanged means it never tracks the prior count; every later sum reuses a stale value."
+        },
+        {
+          "conceptLabel": "Shift nxt into a, keep b",
+          "fragments": {
+            "python": "a, b = nxt, b",
+            "java": "a = nxt;"
+          },
+          "rationale": "This keeps the old b and discards it from a's slot — the window moves the wrong direction."
+        }
       ],
-      "correctIndex": 1,
-      "explanation": "Pure recursion here is the canonical example of overlapping subproblems. Memoization or iteration fixes it; the recursive structure itself is fine."
+      "correctIndex": 0
     },
     {
       "id": 5,
-      "type": "edgeCase",
-      "timeLimitSeconds": 25,
-      "question": "Which input is most likely to expose a base case bug?",
+      "stage": "output",
+      "question": "What is the answer?",
       "options": [
-        "n = 0 (zero steps)",
-        "n = 1 (one step)",
-        "n = 45 (large enough to overflow naive recursion's stack)",
-        "n = 10 (typical case)"
+        {
+          "conceptLabel": "a, the count for n",
+          "fragments": {
+            "python": "a",
+            "java": "a"
+          },
+          "rationale": "After n rolls, a holds ways(n)."
+        },
+        {
+          "conceptLabel": "b, the look-ahead value",
+          "fragments": {
+            "python": "b",
+            "java": "b"
+          },
+          "rationale": "b is one step ahead — ways(n+1), not ways(n)."
+        },
+        {
+          "conceptLabel": "a + b",
+          "fragments": {
+            "python": "a + b",
+            "java": "a + b"
+          },
+          "rationale": "Summing the final pair gives ways(n+1), overshooting by one step."
+        },
+        {
+          "conceptLabel": "n",
+          "fragments": {
+            "python": "n",
+            "java": "n"
+          },
+          "rationale": "Returning the input ignores the computation entirely."
+        }
       ],
-      "correctIndex": 0,
-      "explanation": "n = 0 is the underspecified case — is there 1 way (do nothing) or 0 ways (no staircase)? Naive implementations crash or return wrong values depending on how they're seeded."
+      "correctIndex": 0
     }
   ]
 }

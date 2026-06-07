@@ -117,7 +117,7 @@ export default function Player({ puzzle }: { puzzle: Puzzle }) {
       {!done && (
         <section className="mt-6">
           <p className="text-xs font-semibold uppercase tracking-wide opacity-50">
-            Round {roundIdx + 1} of 5 · {round.type}
+            Round {roundIdx + 1} of 5 · {round.stage}
           </p>
           <h2 className="mt-1 text-lg font-semibold">{round.question}</h2>
           <div className="mt-4 flex flex-col gap-3">
@@ -129,20 +129,31 @@ export default function Player({ puzzle }: { puzzle: Puzzle }) {
                 onClick={() => choose(i as 0 | 1 | 2 | 3)}
                 className={`w-full rounded-lg px-4 py-3 text-left text-sm transition-colors ${optionClass(i)} ${revealed ? "cursor-default" : "cursor-pointer"}`}
               >
-                {opt}
+                {opt.conceptLabel}
               </button>
             ))}
           </div>
         </section>
       )}
 
-      {/* [D] Explanation */}
+      {/* [D] Reveal — the correct fragment's code + rationale, plus your pick if wrong */}
       {!done && revealed && (
         <section className="mt-4 rounded-lg border border-black/10 bg-black/[0.03] p-4 dark:border-white/15 dark:bg-white/5">
           <p className="text-xs font-semibold uppercase tracking-wide opacity-50">
-            {current?.correct ? "Correct" : "Explanation"}
+            {current?.correct ? "Correct" : "Not quite"}
           </p>
-          <p className="mt-1 text-sm leading-relaxed opacity-90">{round.explanation}</p>
+          <pre className="mt-2 overflow-x-auto rounded bg-black/5 p-2 text-xs dark:bg-white/10">
+            {round.options[correctIndex].fragments.python}
+          </pre>
+          <p className="mt-2 text-sm leading-relaxed opacity-90">
+            {round.options[correctIndex].rationale}
+          </p>
+          {!current?.correct && current && (
+            <p className="mt-3 border-t border-black/10 pt-3 text-sm leading-relaxed opacity-75 dark:border-white/15">
+              <span className="font-semibold">You picked “{round.options[current.chosen].conceptLabel}”:</span>{" "}
+              {round.options[current.chosen].rationale}
+            </p>
+          )}
         </section>
       )}
 

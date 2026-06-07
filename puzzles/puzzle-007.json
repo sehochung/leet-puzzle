@@ -9,76 +9,221 @@
       "output": 4
     }
   },
+  "scaffolds": {
+    "python": "def solve(data):\n    nums, target = data[\"nums\"], data[\"target\"]\n    {{state}}\n    {{iterate}}\n        {{transform}}\n        {{update}}\n    return {{output}}",
+    "java": "import java.util.*;\nclass Solution {\n    static int solve(int[] nums, int target) {\n        {{state}}\n        {{iterate}}\n            {{transform}}\n            {{update}}\n        }\n        return {{output}};\n    }\n}"
+  },
+  "canonicalSolutions": {
+    "python": "def solve(data):\n    nums, target = data[\"nums\"], data[\"target\"]\n    lo, hi = 0, len(nums) - 1\n    while lo <= hi:\n        mid = (lo + hi) // 2\n        if nums[mid] == target:\n            return mid\n        if nums[lo] <= nums[mid]:\n            if nums[lo] <= target < nums[mid]:\n                hi = mid - 1\n            else:\n                lo = mid + 1\n        else:\n            if nums[mid] < target <= nums[hi]:\n                lo = mid + 1\n            else:\n                hi = mid - 1\n    return -1",
+    "java": "import java.util.*;\nclass Solution {\n    static int solve(int[] nums, int target) {\n        int lo = 0, hi = nums.length - 1;\n        while (lo <= hi) {\n            int mid = (lo + hi) / 2; if (nums[mid] == target) return mid;\n            if (nums[lo] <= nums[mid]) {\n                if (nums[lo] <= target && target < nums[mid]) hi = mid - 1; else lo = mid + 1;\n            } else {\n                if (nums[mid] < target && target <= nums[hi]) lo = mid + 1; else hi = mid - 1;\n            }\n        }\n        return -1;\n    }\n}"
+  },
+  "tests": [
+    { "input": { "nums": [4, 5, 6, 7, 0, 1, 2], "target": 0 }, "expected": 4 },
+    { "input": { "nums": [4, 5, 6, 7, 0, 1, 2], "target": 3 }, "expected": -1 },
+    { "input": { "nums": [1], "target": 1 }, "expected": 0 },
+    { "input": { "nums": [1], "target": 0 }, "expected": -1 },
+    { "input": { "nums": [5, 1, 3], "target": 5 }, "expected": 0 }
+  ],
   "rounds": [
     {
       "id": 1,
-      "type": "principle",
-      "timeLimitSeconds": 20,
-      "question": "Standard binary search needs a fully sorted array. What property of a rotated sorted array preserves enough order for binary search to still work?",
+      "stage": "state",
+      "question": "What state drives a binary search?",
       "options": [
-        "Every element is still smaller than every element after it",
-        "At least one half of any split around the midpoint is fully sorted",
-        "The pivot is always at a predictable index",
-        "The array can be re-sorted in O(log n) time"
+        {
+          "conceptLabel": "Low and high bounds over the whole array",
+          "fragments": {
+            "python": "lo, hi = 0, len(nums) - 1",
+            "java": "int lo = 0, hi = nums.length - 1;"
+          },
+          "rationale": "Binary search narrows a [lo, hi] range; start it spanning the entire array."
+        },
+        {
+          "conceptLabel": "A single scanning index",
+          "fragments": {
+            "python": "i = 0",
+            "java": "int i = 0;"
+          },
+          "rationale": "One index gives a linear O(n) scan, not the O(log n) the problem demands."
+        },
+        {
+          "conceptLabel": "A set of seen values",
+          "fragments": {
+            "python": "seen = set()",
+            "java": "Set<Integer> seen = new HashSet<>();"
+          },
+          "rationale": "Membership tracking is for unsorted search; it ignores the sorted-rotated structure that enables log-time search."
+        },
+        {
+          "conceptLabel": "Low, high, and a running best",
+          "fragments": {
+            "python": "lo, hi = 0, len(nums) - 1\n    best = -1",
+            "java": "int lo = 0, hi = nums.length - 1; int best = -1;"
+          },
+          "rationale": "Nothing is being maximized — you return the moment you find target, so an extra accumulator is dead weight."
+        }
       ],
-      "correctIndex": 1,
-      "explanation": "Cut the array anywhere; one side is always normally sorted. That's the half where you can check 'is target in this range' in O(1)."
+      "correctIndex": 0
     },
     {
       "id": 2,
-      "type": "approach",
-      "timeLimitSeconds": 25,
-      "question": "At each step, how do you decide which half to recurse into?",
+      "stage": "iterate",
+      "question": "How does the search loop run?",
       "options": [
-        "Compare target to mid; if smaller, go left; if larger, go right",
-        "Identify which half is sorted, check if target falls in its range, recurse accordingly",
-        "Always go right unless mid equals target",
-        "Recurse into both halves and combine results"
+        {
+          "conceptLabel": "Linearly over every index",
+          "fragments": {
+            "python": "for i in range(len(nums)):",
+            "java": "for (int i = 0; i < nums.length; i++) {"
+          },
+          "rationale": "A full linear pass is O(n) and throws away the log-time advantage."
+        },
+        {
+          "conceptLabel": "While the bounds have not crossed",
+          "fragments": {
+            "python": "while lo <= hi:",
+            "java": "while (lo <= hi) {"
+          },
+          "rationale": "Keep halving while the search range is non-empty; lo <= hi still includes the single-element case."
+        },
+        {
+          "conceptLabel": "While lo is strictly less than hi",
+          "fragments": {
+            "python": "while lo < hi:",
+            "java": "while (lo < hi) {"
+          },
+          "rationale": "Stopping at lo < hi skips checking the final single element, so a target sitting there is missed."
+        },
+        {
+          "conceptLabel": "Loop forever",
+          "fragments": {
+            "python": "while True:",
+            "java": "while (true) {"
+          },
+          "rationale": "An unbounded loop needs an explicit break on an empty range; as written it can spin forever when target is absent."
+        }
       ],
-      "correctIndex": 1,
-      "explanation": "You can't compare to mid alone because the rotation breaks the ordering assumption. Identifying the sorted half first restores reliable range checks."
+      "correctIndex": 1
     },
     {
       "id": 3,
-      "type": "complexity",
-      "timeLimitSeconds": 20,
-      "question": "What's the time complexity of the optimal solution?",
+      "stage": "transform",
+      "question": "What do you compute and check first each step?",
       "options": [
-        "O(1)",
-        "O(log n)",
-        "O(n)",
-        "O(n log n)"
+        {
+          "conceptLabel": "Midpoint as the average of the end values",
+          "fragments": {
+            "python": "mid = (nums[lo] + nums[hi]) // 2",
+            "java": "int mid = (nums[lo] + nums[hi]) / 2;"
+          },
+          "rationale": "mid must be an INDEX, not an average of values; this indexes nums by a value and breaks."
+        },
+        {
+          "conceptLabel": "Midpoint, but compare it to nums[lo]",
+          "fragments": {
+            "python": "mid = (lo + hi) // 2\n        if nums[mid] == nums[lo]:\n            return mid",
+            "java": "int mid = (lo + hi) / 2; if (nums[mid] == nums[lo]) return mid;"
+          },
+          "rationale": "You're searching for target, so the hit test is nums[mid] == target, not == nums[lo]."
+        },
+        {
+          "conceptLabel": "Midpoint index, return if it equals target",
+          "fragments": {
+            "python": "mid = (lo + hi) // 2\n        if nums[mid] == target:\n            return mid",
+            "java": "int mid = (lo + hi) / 2; if (nums[mid] == target) return mid;"
+          },
+          "rationale": "Compute the middle index and short-circuit the moment you land on target."
+        },
+        {
+          "conceptLabel": "Midpoint via lo + hi without halving",
+          "fragments": {
+            "python": "mid = lo + hi\n        if nums[mid] == target:\n            return mid",
+            "java": "int mid = lo + hi; if (nums[mid] == target) return mid;"
+          },
+          "rationale": "lo + hi runs off the end of the array; the midpoint is (lo + hi) // 2."
+        }
       ],
-      "correctIndex": 1,
-      "explanation": "Each step halves the search space, just like standard binary search. The rotation adds bookkeeping but doesn't change the depth."
+      "correctIndex": 2
     },
     {
       "id": 4,
-      "type": "ambiguity",
-      "timeLimitSeconds": 30,
-      "question": "What if the array contains duplicates? How does the algorithm change?",
+      "stage": "update",
+      "question": "Which half do you keep?",
       "options": [
-        "It still runs in O(log n) — duplicates don't affect the logic",
-        "It degrades to O(n) in the worst case because you can't always tell which half is sorted",
-        "It returns immediately as soon as any duplicate is found",
-        "Duplicates make the problem unsolvable"
+        {
+          "conceptLabel": "Find the sorted half, then narrow by whether target lies in it",
+          "fragments": {
+            "python": "if nums[lo] <= nums[mid]:\n            if nums[lo] <= target < nums[mid]:\n                hi = mid - 1\n            else:\n                lo = mid + 1\n        else:\n            if nums[mid] < target <= nums[hi]:\n                lo = mid + 1\n            else:\n                hi = mid - 1",
+            "java": "if (nums[lo] <= nums[mid]) {\n                if (nums[lo] <= target && target < nums[mid]) hi = mid - 1; else lo = mid + 1;\n            } else {\n                if (nums[mid] < target && target <= nums[hi]) lo = mid + 1; else hi = mid - 1;\n            }"
+          },
+          "rationale": "Exactly one side of mid is sorted; if target falls within that sorted side's range, search it, otherwise search the other."
+        },
+        {
+          "conceptLabel": "Always discard the right half",
+          "fragments": {
+            "python": "hi = mid - 1",
+            "java": "hi = mid - 1;"
+          },
+          "rationale": "Plain binary search assumes full sorted order; rotation means target may be on either side, so you can't blindly drop one half."
+        },
+        {
+          "conceptLabel": "Compare only nums[mid] to target",
+          "fragments": {
+            "python": "if nums[mid] < target:\n            lo = mid + 1\n        else:\n            hi = mid - 1",
+            "java": "if (nums[mid] < target) lo = mid + 1; else hi = mid - 1;"
+          },
+          "rationale": "That's the unrotated rule; at the rotation point it sends you the wrong way and misses the target."
+        },
+        {
+          "conceptLabel": "Collapse both bounds onto mid",
+          "fragments": {
+            "python": "lo = mid\n        hi = mid",
+            "java": "lo = mid; hi = mid;"
+          },
+          "rationale": "Snapping both bounds to mid abandons the rest of the array after a single miss."
+        }
       ],
-      "correctIndex": 1,
-      "explanation": "If nums[left] == nums[mid] == nums[right], you can't determine which side is sorted and must scan linearly past the duplicates. Standard interview follow-up question."
+      "correctIndex": 0
     },
     {
       "id": 5,
-      "type": "edgeCase",
-      "timeLimitSeconds": 25,
-      "question": "Which input is most likely to expose a bug in the half-identification logic?",
+      "stage": "output",
+      "question": "If the loop ends, what do you return?",
       "options": [
-        "[1, 2, 3, 4, 5], target = 3 (unrotated)",
-        "[3, 1], target = 1 (minimum rotation)",
-        "[5, 1, 2, 3, 4], target = 5 (rotated by one)",
-        "[1, 2, 3, 4, 5], target = 6 (target not present)"
+        {
+          "conceptLabel": "-1, meaning not found",
+          "fragments": {
+            "python": "-1",
+            "java": "-1"
+          },
+          "rationale": "An exhausted range means target isn't present; the contract is -1 in that case."
+        },
+        {
+          "conceptLabel": "lo, the final low bound",
+          "fragments": {
+            "python": "lo",
+            "java": "lo"
+          },
+          "rationale": "lo is just where the search stopped, not a valid index of target."
+        },
+        {
+          "conceptLabel": "The midpoint",
+          "fragments": {
+            "python": "mid",
+            "java": "mid"
+          },
+          "rationale": "mid holds the last probe, which by definition wasn't target."
+        },
+        {
+          "conceptLabel": "False",
+          "fragments": {
+            "python": "False",
+            "java": "0"
+          },
+          "rationale": "The contract is an index (or -1), not a boolean / placeholder."
+        }
       ],
-      "correctIndex": 1,
-      "explanation": "With only two elements, off-by-one errors in identifying the sorted half show up immediately. Many implementations handle large rotated arrays but fail here."
+      "correctIndex": 0
     }
   ]
 }

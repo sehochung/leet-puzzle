@@ -9,76 +9,220 @@
       "output": 49
     }
   },
+  "scaffolds": {
+    "python": "def solve(height):\n    {{state}}\n    {{iterate}}\n        {{transform}}\n        {{update}}\n    return {{output}}",
+    "java": "import java.util.*;\nclass Solution {\n    static int solve(int[] height) {\n        {{state}}\n        {{iterate}}\n            {{transform}}\n            {{update}}\n        }\n        return {{output}};\n    }\n}"
+  },
+  "canonicalSolutions": {
+    "python": "def solve(height):\n    lo, hi = 0, len(height) - 1\n    best = 0\n    while lo < hi:\n        area = min(height[lo], height[hi]) * (hi - lo)\n        best = max(best, area)\n        if height[lo] < height[hi]:\n            lo += 1\n        else:\n            hi -= 1\n    return best",
+    "java": "import java.util.*;\nclass Solution {\n    static int solve(int[] height) {\n        int lo = 0, hi = height.length - 1; int best = 0;\n        while (lo < hi) {\n            int area = Math.min(height[lo], height[hi]) * (hi - lo);\n            best = Math.max(best, area);\n            if (height[lo] < height[hi]) lo++; else hi--;\n        }\n        return best;\n    }\n}"
+  },
+  "tests": [
+    { "input": [1, 8, 6, 2, 5, 4, 8, 3, 7], "expected": 49 },
+    { "input": [1, 1], "expected": 1 },
+    { "input": [4, 3, 2, 1, 4], "expected": 16 },
+    { "input": [1, 2, 1], "expected": 2 }
+  ],
   "rounds": [
     {
       "id": 1,
-      "type": "principle",
-      "timeLimitSeconds": 20,
-      "question": "You start with pointers at both ends. When you move one inward, which one should it be?",
+      "stage": "state",
+      "question": "What initial state powers the two-pointer sweep?",
       "options": [
-        "Always the left pointer — sweep left to right",
-        "Always the pointer with the lower height",
-        "Always the pointer with the higher height",
-        "Whichever points to the smaller index"
+        {
+          "conceptLabel": "Pointers at both ends, best area zero",
+          "fragments": {
+            "python": "lo, hi = 0, len(height) - 1\n    best = 0",
+            "java": "int lo = 0, hi = height.length - 1; int best = 0;"
+          },
+          "rationale": "The widest container is the full span; start there, shrink inward, and track the best area seen."
+        },
+        {
+          "conceptLabel": "One pointer and a running sum",
+          "fragments": {
+            "python": "i = 0\n    total = 0",
+            "java": "int i = 0; int total = 0;"
+          },
+          "rationale": "Area depends on a PAIR of lines; one pointer and a sum can't express the width-times-height relationship."
+        },
+        {
+          "conceptLabel": "Sort the heights first",
+          "fragments": {
+            "python": "height = sorted(height)\n    lo, hi = 0, len(height) - 1",
+            "java": "Arrays.sort(height); int lo = 0, hi = height.length - 1;"
+          },
+          "rationale": "Sorting destroys positions, but width is the distance between original indices — you'd measure lines that aren't really that far apart."
+        },
+        {
+          "conceptLabel": "Pointers at both ends, best seeded with a height",
+          "fragments": {
+            "python": "lo, hi = 0, len(height) - 1\n    best = height[0]",
+            "java": "int lo = 0, hi = height.length - 1; int best = height[0];"
+          },
+          "rationale": "Seeding best with a height (not an area) can mis-count; the correct starting best is 0."
+        }
       ],
-      "correctIndex": 1,
-      "explanation": "The area is bounded by the shorter line. Moving the taller one in can only shrink the area; moving the shorter one in is the only move that could find something better."
+      "correctIndex": 0
     },
     {
       "id": 2,
-      "type": "approach",
-      "timeLimitSeconds": 25,
-      "question": "How is the area at each step calculated?",
+      "stage": "iterate",
+      "question": "How long do you sweep?",
       "options": [
-        "(right − left) × max(height[left], height[right])",
-        "(right − left) × min(height[left], height[right])",
-        "(right + left) × min(height[left], height[right])",
-        "(right − left) × (height[left] + height[right]) / 2"
+        {
+          "conceptLabel": "Once per index, left to right",
+          "fragments": {
+            "python": "for lo in range(len(height)):",
+            "java": "for (int lo = 0; lo < height.length; lo++) {"
+          },
+          "rationale": "A single moving index gives no opposing wall; the area needs two converging pointers, not one sweep."
+        },
+        {
+          "conceptLabel": "While the two pointers have not met",
+          "fragments": {
+            "python": "while lo < hi:",
+            "java": "while (lo < hi) {"
+          },
+          "rationale": "Each step discards the shorter wall and narrows the window, finishing in one linear pass."
+        },
+        {
+          "conceptLabel": "Nested loops over every pair",
+          "fragments": {
+            "python": "for i in range(len(height)):\n            for j in range(i + 1, len(height)):",
+            "java": "for (int i = 0; i < height.length; i++) for (int j = i + 1; j < height.length; j++) {"
+          },
+          "rationale": "Checking every pair is O(n^2); the two-pointer insight reaches the same answer in O(n)."
+        },
+        {
+          "conceptLabel": "While lo is less than or equal to hi",
+          "fragments": {
+            "python": "while lo <= hi:",
+            "java": "while (lo <= hi) {"
+          },
+          "rationale": "When lo == hi the width is zero — a pointless iteration that signals an off-by-one."
+        }
       ],
-      "correctIndex": 1,
-      "explanation": "Width is the distance between pointers; height is bounded by the shorter line because water would spill over the lower one."
+      "correctIndex": 1
     },
     {
       "id": 3,
-      "type": "complexity",
-      "timeLimitSeconds": 20,
-      "question": "What's the time complexity of the two-pointer approach?",
+      "stage": "transform",
+      "question": "How do you compute this pair's area?",
       "options": [
-        "O(log n)",
-        "O(n)",
-        "O(n log n)",
-        "O(n²)"
+        {
+          "conceptLabel": "Sum of the heights times the width",
+          "fragments": {
+            "python": "area = (height[lo] + height[hi]) * (hi - lo)",
+            "java": "int area = (height[lo] + height[hi]) * (hi - lo);"
+          },
+          "rationale": "Water is capped by the SHORTER wall; summing overstates capacity past where it would spill over."
+        },
+        {
+          "conceptLabel": "Taller wall times the width",
+          "fragments": {
+            "python": "area = max(height[lo], height[hi]) * (hi - lo)",
+            "java": "int area = Math.max(height[lo], height[hi]) * (hi - lo);"
+          },
+          "rationale": "The taller wall holds no water above the shorter one; use the min, not the max."
+        },
+        {
+          "conceptLabel": "Shorter wall times the width",
+          "fragments": {
+            "python": "area = min(height[lo], height[hi]) * (hi - lo)",
+            "java": "int area = Math.min(height[lo], height[hi]) * (hi - lo);"
+          },
+          "rationale": "The container holds water up to the lower of the two walls, across the distance between them."
+        },
+        {
+          "conceptLabel": "Shorter wall times the left index",
+          "fragments": {
+            "python": "area = min(height[lo], height[hi]) * lo",
+            "java": "int area = Math.min(height[lo], height[hi]) * lo;"
+          },
+          "rationale": "Width is the DISTANCE between the lines (hi - lo), not a single index."
+        }
       ],
-      "correctIndex": 1,
-      "explanation": "Each step moves exactly one pointer inward, so the pointers meet after n steps. Linear in array length."
+      "correctIndex": 2
     },
     {
       "id": 4,
-      "type": "ambiguity",
-      "timeLimitSeconds": 30,
-      "question": "A teammate says: 'Why not check every pair of lines? It's only O(n²).' What's the strongest counter-argument?",
+      "stage": "update",
+      "question": "After scoring, which pointer should move?",
       "options": [
-        "O(n²) is too slow for any reasonable input size",
-        "Two pointers is provably correct because every pair the brute force checks is either evaluated or dominated by a pair the pointers do check",
-        "The brute force uses too much memory",
-        "Two pointers is easier to write than nested loops"
+        {
+          "conceptLabel": "Always advance the left pointer",
+          "fragments": {
+            "python": "best = max(best, area)\n        lo += 1",
+            "java": "best = Math.max(best, area);\n            lo++;"
+          },
+          "rationale": "Blindly advancing lo can step past a tall left wall that pairs well later; you must move the shorter side."
+        },
+        {
+          "conceptLabel": "Record the best, then drop the shorter wall",
+          "fragments": {
+            "python": "best = max(best, area)\n        if height[lo] < height[hi]:\n            lo += 1\n        else:\n            hi -= 1",
+            "java": "best = Math.max(best, area);\n            if (height[lo] < height[hi]) lo++; else hi--;"
+          },
+          "rationale": "The shorter wall caps this and every narrower window with it, so discarding it is the only move that can improve the area."
+        },
+        {
+          "conceptLabel": "Drop the taller wall",
+          "fragments": {
+            "python": "best = max(best, area)\n        if height[lo] < height[hi]:\n            hi -= 1\n        else:\n            lo += 1",
+            "java": "best = Math.max(best, area);\n            if (height[lo] < height[hi]) hi--; else lo++;"
+          },
+          "rationale": "Discarding the taller wall keeps the limiting short wall while throwing away height — exactly backwards."
+        },
+        {
+          "conceptLabel": "Move both walls inward",
+          "fragments": {
+            "python": "best = max(best, area)\n        lo += 1\n        hi -= 1",
+            "java": "best = Math.max(best, area);\n            lo++; hi--;"
+          },
+          "rationale": "Collapsing both at once skips candidate pairs and can miss the optimal container."
+        }
       ],
-      "correctIndex": 1,
-      "explanation": "Correctness is the real argument, not speed. Knowing why two pointers doesn't miss the optimum is the senior insight. Speed alone doesn't justify it if you can't prove it works."
+      "correctIndex": 1
     },
     {
       "id": 5,
-      "type": "edgeCase",
-      "timeLimitSeconds": 25,
-      "question": "Which input most clearly tests whether your pointer-movement rule is correct?",
+      "stage": "output",
+      "question": "What do you return?",
       "options": [
-        "[1, 1, 1, 1, 1] — all equal heights",
-        "[5, 4, 3, 2, 1] — strictly decreasing",
-        "[1, 8, 100, 8, 1] — single tall spike in the middle",
-        "[2, 1] — minimum length"
+        {
+          "conceptLabel": "The best area found",
+          "fragments": {
+            "python": "best",
+            "java": "best"
+          },
+          "rationale": "best holds the maximum over every window considered — the answer."
+        },
+        {
+          "conceptLabel": "The last area computed",
+          "fragments": {
+            "python": "area",
+            "java": "area"
+          },
+          "rationale": "The final window is the narrowest, rarely the best; you need the running maximum."
+        },
+        {
+          "conceptLabel": "The final gap width",
+          "fragments": {
+            "python": "hi - lo",
+            "java": "hi - lo"
+          },
+          "rationale": "When the loop ends the pointers have met, so this is 0 — and width isn't the area anyway."
+        },
+        {
+          "conceptLabel": "The tallest line",
+          "fragments": {
+            "python": "max(height)",
+            "java": "Arrays.stream(height).max().getAsInt()"
+          },
+          "rationale": "The answer is an area (height times width), not a single height."
+        }
       ],
-      "correctIndex": 2,
-      "explanation": "The tall spike tempts you to anchor on it, but the optimal pair is actually the two outer lines. Tests whether your rule resists the temptation to move toward the maximum."
+      "correctIndex": 0
     }
   ]
 }
