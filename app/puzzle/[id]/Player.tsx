@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import type { Language, Puzzle } from "@/lib/puzzle";
+import { buildConstructedCode } from "@/lib/build-code";
 import ConstructedCode from "./ConstructedCode";
 
 type Answer = { chosen: 0 | 1 | 2 | 3; correct: boolean };
@@ -211,23 +212,62 @@ export default function Player({ puzzle }: { puzzle: Puzzle }) {
         </button>
       )}
 
-      {/* [F] Summary */}
+      {/* [F] Summary — score, the solution you built, and a per-stage breakdown */}
       {done && (
-        <section className="mt-6 rounded-lg border border-black/10 p-6 text-center dark:border-white/15">
-          <p className="text-sm uppercase tracking-wide opacity-50">Your score</p>
-          <p className="mt-1 text-5xl font-bold tabular-nums">{correctCount}/5</p>
-          <div className="mt-5 flex justify-center gap-2">
-            {answers.map((a, idx) => (
-              <div
-                key={idx}
-                className={`flex h-9 w-9 items-center justify-center rounded-md text-sm font-semibold ${
-                  a?.correct ? "bg-green-600 text-white" : "bg-red-600 text-white"
-                }`}
-              >
-                {idx + 1}
-              </div>
-            ))}
+        <section className="mt-6 rounded-lg border border-black/10 p-6 dark:border-white/15">
+          <div className="text-center">
+            <p className="text-sm uppercase tracking-wide opacity-50">Your score</p>
+            <p className="mt-1 text-5xl font-bold tabular-nums">{correctCount}/5</p>
+            <div className="mt-4 flex justify-center gap-2">
+              {answers.map((a, idx) => (
+                <div
+                  key={idx}
+                  className={`flex h-8 w-8 items-center justify-center rounded-md text-sm font-semibold ${
+                    a?.correct ? "bg-green-600 text-white" : "bg-red-600 text-white"
+                  }`}
+                >
+                  {idx + 1}
+                </div>
+              ))}
+            </div>
           </div>
+
+          {/* Solution you built */}
+          <div className="mt-6">
+            <div className="mb-2 flex items-center justify-between">
+              <p className="text-xs font-semibold uppercase tracking-wide opacity-50">
+                Solution you built
+              </p>
+              <LangToggle language={language} setLanguage={setLanguage} />
+            </div>
+            <pre className="overflow-x-auto rounded bg-black/5 p-3 text-xs leading-relaxed dark:bg-white/10">
+              <code>{buildConstructedCode(puzzle, 5, language)}</code>
+            </pre>
+          </div>
+
+          {/* Per-stage breakdown: which stages you nailed vs. missed */}
+          <div className="mt-5">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide opacity-50">
+              Stage breakdown
+            </p>
+            <ul className="flex flex-col gap-2">
+              {puzzle.rounds.map((r, i) => {
+                const ok = answers[i]?.correct;
+                return (
+                  <li key={r.id} className="flex items-start gap-2 text-xs">
+                    <span className={`mt-1 font-bold ${ok ? "text-green-600" : "text-red-600"}`}>
+                      {ok ? "✓" : "✗"}
+                    </span>
+                    <span className="mt-1 w-20 shrink-0 font-semibold opacity-70">{r.stage}</span>
+                    <code className="min-w-0 flex-1 whitespace-pre-wrap break-words rounded bg-black/5 px-1.5 py-1 opacity-80 dark:bg-white/10">
+                      {r.options[r.correctIndex].fragments[language]}
+                    </code>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+
           <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
             <button
               type="button"
