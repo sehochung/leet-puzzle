@@ -2,6 +2,7 @@
   "id": "puzzle-009",
   "date": "2026-06-09",
   "title": "Climbing Stairs",
+  "topic": "dp",
   "baseProblem": {
     "statement": "You're climbing a staircase with n steps. You can climb 1 or 2 steps at a time. How many distinct ways can you reach the top?",
     "example": {

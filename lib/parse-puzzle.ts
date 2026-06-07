@@ -3,8 +3,17 @@ import {
   type Puzzle,
   type Round,
   type TestCase,
+  type Topic,
   STAGE_ORDER,
 } from "./puzzle";
+
+const TOPICS = new Set<Topic>([
+  "hashmap",
+  "two-pointer",
+  "sliding-window",
+  "binary-search",
+  "dp",
+]);
 
 // Throws Error with a field-path message on any invalid input, e.g.
 //   "rounds[2].options[1].fragments.java: expected non-empty string"
@@ -124,6 +133,8 @@ export function parsePuzzle(data: unknown): Puzzle {
   assert(/^puzzle-\d{3}$/.test(id), "id", `expected /^puzzle-\\d{3}$/, got "${id}"`);
   const date = str(data.date, "date");
   assert(/^\d{4}-\d{2}-\d{2}$/.test(date), "date", `expected YYYY-MM-DD, got "${date}"`);
+  const topic = str(data.topic, "topic");
+  assert(TOPICS.has(topic as Topic), "topic", `expected one of ${[...TOPICS].join("|")}, got "${topic}"`);
 
   const bp = data.baseProblem;
   assert(isRecord(bp), "baseProblem", "expected object");
@@ -149,6 +160,7 @@ export function parsePuzzle(data: unknown): Puzzle {
     id,
     date,
     title: nonEmptyStr(data.title, "title"),
+    topic: topic as Topic,
     baseProblem: {
       statement: nonEmptyStr(bp.statement, "baseProblem.statement"),
       example: { input: example.input, output: example.output },

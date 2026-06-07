@@ -17,6 +17,13 @@ export const STAGE_ORDER: readonly Stage[] = [
 
 export type Language = "python" | "java";
 
+export type Topic =
+  | "hashmap"
+  | "two-pointer"
+  | "sliding-window"
+  | "binary-search"
+  | "dp";
+
 export type Option = {
   conceptLabel: string; // shown on the button, language-neutral
   fragments: { python: string; java: string }; // both required, no nulls
@@ -40,6 +47,7 @@ export type Puzzle = {
   id: string; // /^puzzle-\d{3}$/
   date: string; // YYYY-MM-DD
   title: string;
+  topic: Topic; // problem family; drives the list-page Topic column
   baseProblem: {
     statement: string;
     example: { input: unknown; output: unknown };

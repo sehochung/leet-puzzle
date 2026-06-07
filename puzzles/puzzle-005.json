@@ -2,6 +2,7 @@
   "id": "puzzle-005",
   "date": "2026-06-05",
   "title": "Longest Substring Without Repeating Characters",
+  "topic": "sliding-window",
   "baseProblem": {
     "statement": "Given a string, find the length of the longest substring that contains no repeated characters.",
     "example": {

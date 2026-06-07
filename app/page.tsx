@@ -1,5 +1,14 @@
 import Link from "next/link";
 import { loadAllPuzzles } from "@/lib/puzzles";
+import type { Topic } from "@/lib/puzzle";
+
+const TOPIC_LABEL: Record<Topic, string> = {
+  hashmap: "Hash Map",
+  "two-pointer": "Two Pointer",
+  "sliding-window": "Sliding Window",
+  "binary-search": "Binary Search",
+  dp: "Dynamic Programming",
+};
 
 export default async function Home() {
   const { puzzles, errors } = await loadAllPuzzles();
@@ -43,8 +52,7 @@ export default async function Home() {
               <span className="tabular-nums opacity-60">{n}</span>
               <span className="font-medium">{p.title}</span>
               <span className="text-sm tabular-nums opacity-70">{p.date}</span>
-              {/* Topic is a placeholder derived from the title until tags land in the schema. */}
-              <span className="hidden truncate text-sm opacity-60 sm:block">{p.title}</span>
+              <span className="hidden truncate text-sm opacity-60 sm:block">{TOPIC_LABEL[p.topic]}</span>
             </Link>
           );
         })}

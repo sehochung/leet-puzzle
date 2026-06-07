@@ -2,6 +2,7 @@
   "id": "puzzle-001",
   "date": "2026-06-01",
   "title": "Group Anagrams",
+  "topic": "hashmap",
   "baseProblem": {
     "statement": "Given an array of strings, group the anagrams together. Return them as a list of groups in any order.",
     "example": {

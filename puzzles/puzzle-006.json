@@ -2,6 +2,7 @@
   "id": "puzzle-006",
   "date": "2026-06-06",
   "title": "Minimum Window Substring",
+  "topic": "sliding-window",
   "baseProblem": {
     "statement": "Given two strings s and t, return the shortest substring of s that contains every character of t (including duplicates). If no such substring exists, return an empty string.",
     "example": {

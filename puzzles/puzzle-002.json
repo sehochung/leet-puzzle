@@ -2,6 +2,7 @@
   "id": "puzzle-002",
   "date": "2026-06-02",
   "title": "Two Sum",
+  "topic": "hashmap",
   "baseProblem": {
     "statement": "Given an array of integers and a target value, return the indices of the two numbers that add up to the target. Each input has exactly one solution, and you cannot use the same element twice.",
     "example": {

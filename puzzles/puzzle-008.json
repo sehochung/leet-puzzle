@@ -2,6 +2,7 @@
   "id": "puzzle-008",
   "date": "2026-06-08",
   "title": "Find Minimum in Rotated Sorted Array",
+  "topic": "binary-search",
   "baseProblem": {
     "statement": "Given a sorted array that has been rotated at some unknown pivot (no duplicates), find the minimum element in O(log n) time.",
     "example": {

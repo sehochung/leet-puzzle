@@ -2,6 +2,7 @@
   "id": "puzzle-003",
   "date": "2026-06-03",
   "title": "Valid Palindrome",
+  "topic": "two-pointer",
   "baseProblem": {
     "statement": "Given a string, return true if it reads the same forwards and backwards after converting to lowercase and removing non-alphanumeric characters.",
     "example": {

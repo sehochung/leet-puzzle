@@ -2,6 +2,7 @@
   "id": "puzzle-010",
   "date": "2026-06-10",
   "title": "Longest Increasing Subsequence",
+  "topic": "dp",
   "baseProblem": {
     "statement": "Given an array of integers, return the length of the longest strictly increasing subsequence. The elements don't need to be contiguous.",
     "example": {

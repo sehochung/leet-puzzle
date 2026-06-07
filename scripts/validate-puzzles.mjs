@@ -10,6 +10,7 @@ import { STAGES, renderScaffold } from "./render-canonical.mjs";
 
 const STAGE_ORDER = STAGES;
 const LANGUAGES = ["python", "java"];
+const TOPICS = ["hashmap", "two-pointer", "sliding-window", "binary-search", "dp"];
 const PUZZLES_DIR = join(process.cwd(), "puzzles");
 
 function assert(cond, path, msg) {
@@ -69,6 +70,7 @@ function validateShape(data) {
   assert(/^puzzle-\d{3}$/.test(str(data.id, "id")), "id", `expected /^puzzle-\\d{3}$/, got "${data.id}"`);
   assert(/^\d{4}-\d{2}-\d{2}$/.test(str(data.date, "date")), "date", `expected YYYY-MM-DD, got "${data.date}"`);
   nonEmptyStr(data.title, "title");
+  assert(TOPICS.includes(data.topic), "topic", `expected one of ${TOPICS.join("|")}, got "${data.topic}"`);
   assert(isRecord(data.baseProblem), "baseProblem", "expected object");
   nonEmptyStr(data.baseProblem.statement, "baseProblem.statement");
   assert(isRecord(data.baseProblem.example), "baseProblem.example", "expected object");

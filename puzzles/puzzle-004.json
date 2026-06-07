@@ -2,6 +2,7 @@
   "id": "puzzle-004",
   "date": "2026-06-04",
   "title": "Container With Most Water",
+  "topic": "two-pointer",
   "baseProblem": {
     "statement": "Given an array of non-negative integers representing heights of vertical lines, find two lines that together with the x-axis form a container holding the most water. Return the maximum area.",
     "example": {
