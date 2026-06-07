@@ -2,17 +2,44 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import type { Puzzle } from "@/lib/puzzle";
+import type { Language, Puzzle } from "@/lib/puzzle";
+import ConstructedCode from "./ConstructedCode";
 
 type Answer = { chosen: 0 | 1 | 2 | 3; correct: boolean };
 
 const EMPTY: Array<Answer | null> = [null, null, null, null, null];
+
+function LangToggle({
+  language,
+  setLanguage,
+}: {
+  language: Language;
+  setLanguage: (l: Language) => void;
+}) {
+  return (
+    <div className="inline-flex rounded-md border border-black/15 p-0.5 text-xs font-semibold dark:border-white/20">
+      {(["python", "java"] as const).map((l) => (
+        <button
+          key={l}
+          type="button"
+          onClick={() => setLanguage(l)}
+          className={`rounded px-2.5 py-1 transition-colors ${
+            language === l ? "bg-blue-600 text-white" : "opacity-60 hover:opacity-100"
+          }`}
+        >
+          {l === "python" ? "Python" : "Java"}
+        </button>
+      ))}
+    </div>
+  );
+}
 
 export default function Player({ puzzle }: { puzzle: Puzzle }) {
   const [roundIdx, setRoundIdx] = useState(0);
   const [answers, setAnswers] = useState<Array<Answer | null>>(EMPTY);
   const [revealed, setRevealed] = useState(false);
   const [done, setDone] = useState(false);
+  const [language, setLanguage] = useState<Language>("python");
 
   // roundIdx is always within [0,4]; the guard satisfies the tuple's `| undefined`
   // under noUncheckedIndexedAccess.
@@ -24,6 +51,8 @@ export default function Player({ puzzle }: { puzzle: Puzzle }) {
   const isLast = roundIdx === puzzle.rounds.length - 1;
   const current = answers[roundIdx] ?? null;
   const correctCount = answers.filter((a) => a?.correct).length;
+  // Stages filled in the code panel: completed rounds, plus the current one once revealed.
+  const completedThroughRound = done ? 5 : revealed ? roundIdx + 1 : roundIdx;
 
   function choose(i: 0 | 1 | 2 | 3) {
     if (revealed) return;
@@ -113,6 +142,20 @@ export default function Player({ puzzle }: { puzzle: Puzzle }) {
         </div>
       </section>
 
+      {/* [B2] Constructed code — the artifact, growing one stage per round */}
+      {!done && (
+        <section className="mt-6">
+          <div className="mb-2 flex justify-end">
+            <LangToggle language={language} setLanguage={setLanguage} />
+          </div>
+          <ConstructedCode
+            puzzle={puzzle}
+            completedThroughRound={completedThroughRound}
+            language={language}
+          />
+        </section>
+      )}
+
       {/* [C] Active round */}
       {!done && (
         <section className="mt-6">
@@ -143,7 +186,7 @@ export default function Player({ puzzle }: { puzzle: Puzzle }) {
             {current?.correct ? "Correct" : "Not quite"}
           </p>
           <pre className="mt-2 overflow-x-auto rounded bg-black/5 p-2 text-xs dark:bg-white/10">
-            {round.options[correctIndex].fragments.python}
+            {round.options[correctIndex].fragments[language]}
           </pre>
           <p className="mt-2 text-sm leading-relaxed opacity-90">
             {round.options[correctIndex].rationale}
