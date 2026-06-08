@@ -28,7 +28,7 @@
     {
       "id": 1,
       "stage": "state",
-      "question": "What state should you set up before scanning the strings?",
+      "question": "Before scanning the strings, what container do you need so anagrams end up grouped together?",
       "options": [
         {
           "conceptLabel": "A hash map from canonical key to a list of strings",
@@ -68,7 +68,7 @@
     {
       "id": 2,
       "stage": "iterate",
-      "question": "How should you walk through the input?",
+      "question": "You have an empty hashmap. How do you process the input to populate it?",
       "options": [
         {
           "conceptLabel": "Index over the list with a counter",
@@ -108,7 +108,7 @@
     {
       "id": 3,
       "stage": "transform",
-      "question": "What canonical key identifies a string's anagram class?",
+      "question": "For each string you process, you need a key that's identical for anagrams and different for non-anagrams — what's the right canonical form?",
       "options": [
         {
           "conceptLabel": "The string's length",
@@ -148,7 +148,7 @@
     {
       "id": 4,
       "stage": "update",
-      "question": "How do you place the string into its group?",
+      "question": "With a key derived from each string, how do you record this string under its key?",
       "options": [
         {
           "conceptLabel": "Rebuild the bucket with the string appended",
@@ -188,7 +188,7 @@
     {
       "id": 5,
       "stage": "output",
-      "question": "What do you return?",
+      "question": "Your hashmap now groups strings by canonical key. What do you return?",
       "options": [
         {
           "conceptLabel": "The map's buckets as a list of groups",
