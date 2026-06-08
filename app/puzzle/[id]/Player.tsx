@@ -5,6 +5,7 @@ import Link from "next/link";
 import type { Language, Puzzle } from "@/lib/puzzle";
 import { buildConstructedCode } from "@/lib/build-code";
 import ConstructedCode from "./ConstructedCode";
+import DiffPanel from "./DiffPanel";
 
 type Answer = { chosen: 0 | 1 | 2 | 3; correct: boolean };
 
@@ -54,6 +55,8 @@ export default function Player({ puzzle }: { puzzle: Puzzle }) {
   const correctCount = answers.filter((a) => a?.correct).length;
   // Stages filled in the code panel: completed rounds, plus the current one once revealed.
   const completedThroughRound = done ? 5 : revealed ? roundIdx + 1 : roundIdx;
+  // The player's OWN pick per round (null until answered) — drives the diff panel.
+  const picks = answers.map((a) => (a ? a.chosen : null));
 
   function choose(i: 0 | 1 | 2 | 3) {
     if (revealed) return;
@@ -143,17 +146,28 @@ export default function Player({ puzzle }: { puzzle: Puzzle }) {
         </div>
       </section>
 
-      {/* [B2] Constructed code — the artifact, growing one stage per round */}
+      {/* [B2] Construction panel — the player's own picks land here, growing one stage
+          per round. Diff mode (all current puzzles) shows green/red picks git-diff style;
+          canonical-only is the preserved session-004 fallback. */}
       {!done && (
         <section className="mt-6">
           <div className="mb-2 flex justify-end">
             <LangToggle language={language} setLanguage={setLanguage} />
           </div>
-          <ConstructedCode
-            puzzle={puzzle}
-            completedThroughRound={completedThroughRound}
-            language={language}
-          />
+          {puzzle.constructionMode === "diff" ? (
+            <DiffPanel
+              puzzle={puzzle}
+              picks={picks}
+              revealedThrough={completedThroughRound}
+              language={language}
+            />
+          ) : (
+            <ConstructedCode
+              puzzle={puzzle}
+              completedThroughRound={completedThroughRound}
+              language={language}
+            />
+          )}
         </section>
       )}
 
