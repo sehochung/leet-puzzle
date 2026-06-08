@@ -1,6 +1,6 @@
-import type { Language, Puzzle } from "./puzzle";
+import type { Language, Puzzle, Stage } from "./puzzle";
 
-const COMMENT: Record<Language, string> = { python: "#", java: "//" };
+export const COMMENT: Record<Language, string> = { python: "#", java: "//" };
 
 // Renders the language scaffold with the correct fragment for each completed
 // stage and a placeholder comment for the rest. completedThroughRound is 0..5;
@@ -21,4 +21,22 @@ export function buildConstructedCode(
     out = out.replace(`{{${r.stage}}}`, () => replacement);
   });
   return out;
+}
+
+// Returns the scaffold line that holds {{stage}} with the marker replaced by `fragment`,
+// split into physical lines. The scaffold is the single source of truth for per-stage
+// indentation AND the output `return …;` wrapper, so callers never hardcode them; a
+// multi-line fragment yields multiple rows (all part of the same pick). The () => form
+// inserts the fragment literally so a `$` inside it is never read as a replacement token
+// (mirrors renderScaffold / buildConstructedCode). Used by the diff panel and end-screen.
+export function scaffoldStageLines(
+  puzzle: Puzzle,
+  stage: Stage,
+  fragment: string,
+  language: Language,
+): string[] {
+  const marker = `{{${stage}}}`;
+  const line = puzzle.scaffolds[language].split("\n").find((l) => l.includes(marker));
+  if (line === undefined) return fragment.split("\n"); // defensive; validator guarantees the marker
+  return line.replace(marker, () => fragment).split("\n");
 }
