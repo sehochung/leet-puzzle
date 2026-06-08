@@ -110,6 +110,15 @@ function validateCompose(data) {
   }
 }
 
+// Mirrors lib/parse-puzzle.ts: "diff" iff every option has non-empty fragments in both
+// languages (validateOption already enforces this, so it's always "diff" today). Printed
+// per puzzle so the construction mode is explicit in the build/prebuild output.
+function constructionMode(data) {
+  const allFilled = data.rounds.every((r) =>
+    r.options.every((o) => o.fragments.python.length > 0 && o.fragments.java.length > 0));
+  return allFilled ? "diff" : "canonical-only";
+}
+
 const only = process.argv.slice(2); // optional: basenames to restrict to, e.g. puzzle-001
 const all = (await readdir(PUZZLES_DIR)).filter((f) => /^puzzle-\d{3}\.json$/.test(f)).sort();
 const files = only.length
@@ -122,7 +131,7 @@ for (const file of files) {
     const data = JSON.parse(await readFile(join(PUZZLES_DIR, file), "utf8"));
     validateShape(data);
     validateCompose(data);
-    console.log(`PASS ${file}`);
+    console.log(`PASS ${file} (${constructionMode(data)} mode)`);
   } catch (err) {
     failures++;
     console.error(`FAIL ${file}: ${err.message}`);
