@@ -6,10 +6,12 @@
 // width inside an overflow-x-auto parent, so long lines scroll without clipping the tint.
 //   add        -> green "+"  (correct pick / canonical)
 //   remove     -> red   "-"  (wrong pick)
+//   neutral    -> committed pick during the blind build: numbered, no +/- , no tint (a diff
+//                 "context" line) — correctness is hidden until the end-screen reveal
 //   comment    -> muted stage label, blank gutter
 //   placeholder-> muted "___" slot not yet filled, blank gutter
 
-export type DiffTone = "add" | "remove" | "comment" | "placeholder";
+export type DiffTone = "add" | "remove" | "neutral" | "comment" | "placeholder";
 
 export default function DiffLine({
   lineNo,

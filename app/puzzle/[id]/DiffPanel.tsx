@@ -5,20 +5,23 @@ import type { Language, Puzzle } from "@/lib/puzzle";
 import { COMMENT, scaffoldStageLines } from "@/lib/build-code";
 import DiffLine from "./DiffLine";
 
-// The construction artifact, git-diff style. Each answered round drops the player's OWN
-// pick into the panel — green "+" if correct, red "-" if wrong — so wrong reasoning stays
-// visible. Unanswered rounds show a muted "___" slot under their stage-label comment.
-// Line numbers run over filled rows only (the prompt's "increment ONLY for filled lines").
+// The construction artifact, git-diff style. During the blind build (`neutral`) each answered
+// round drops the player's OWN pick into the panel as a plain numbered "context" line — no
+// +/- , no green/red — so correctness stays hidden until the end-screen reveal. Outside neutral
+// mode a pick shows green "+" if correct, red "-" if wrong. Unanswered rounds show a muted "___"
+// slot under their stage-label comment. Line numbers run over filled rows only.
 export default function DiffPanel({
   puzzle,
   picks,
   revealedThrough,
   language,
+  neutral = false,
 }: {
   puzzle: Puzzle;
   picks: Array<0 | 1 | 2 | 3 | null>;
   revealedThrough: number;
   language: Language;
+  neutral?: boolean;
 }) {
   const rows: ReactNode[] = [];
   let lineNo = 0;
@@ -38,8 +41,8 @@ export default function DiffPanel({
     }
 
     const correct = pick === round.correctIndex;
-    const tone = correct ? "add" : "remove";
-    const sym = correct ? "+" : "-";
+    const tone = neutral ? "neutral" : correct ? "add" : "remove";
+    const sym = neutral ? undefined : correct ? "+" : "-";
     scaffoldStageLines(puzzle, stage, round.options[pick].fragments[language], language).forEach(
       (line, k) => {
         lineNo += 1;
