@@ -156,6 +156,23 @@ export function parsePuzzle(data: unknown): Puzzle {
   assert(Array.isArray(rounds), "rounds", "expected array");
   assert(rounds.length === 5, "rounds", `expected length 5, got ${rounds.length}`);
 
+  const parsedRounds: [Round, Round, Round, Round, Round] = [
+    parseRound(rounds[0], 0),
+    parseRound(rounds[1], 1),
+    parseRound(rounds[2], 2),
+    parseRound(rounds[3], 3),
+    parseRound(rounds[4], 4),
+  ];
+
+  // Derived mode: "diff" iff every option has a non-empty fragment in both languages
+  // (parseOption already enforces this, so it's always "diff" today — computed honestly
+  // so a future puzzle without distractor fragments degrades to the canonical-only panel).
+  const constructionMode = parsedRounds.every((r) =>
+    r.options.every((o) => o.fragments.python.length > 0 && o.fragments.java.length > 0),
+  )
+    ? "diff"
+    : "canonical-only";
+
   return {
     id,
     date,
@@ -174,12 +191,7 @@ export function parsePuzzle(data: unknown): Puzzle {
       java: nonEmptyStr(canonical.java, "canonicalSolutions.java"),
     },
     tests: tests.map((t, i) => parseTest(t, i)),
-    rounds: [
-      parseRound(rounds[0], 0),
-      parseRound(rounds[1], 1),
-      parseRound(rounds[2], 2),
-      parseRound(rounds[3], 3),
-      parseRound(rounds[4], 4),
-    ],
+    rounds: parsedRounds,
+    constructionMode,
   };
 }

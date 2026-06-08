@@ -56,4 +56,10 @@ export type Puzzle = {
   canonicalSolutions: { python: string; java: string }; // what all-correct picks produce
   tests: readonly TestCase[]; // >=1; validator runs canonical against these
   rounds: readonly [Round, Round, Round, Round, Round];
+  // Derived (not in JSON): "diff" when every option carries non-empty fragments in
+  // both languages, so the player's actual pick can be shown green/red per round;
+  // "canonical-only" is the fallback (session-004 panel). Always "diff" for current
+  // data — the parser already requires non-empty fragments — but kept as a real
+  // branch for any future puzzle authored without distractor fragments.
+  constructionMode: "diff" | "canonical-only";
 };
