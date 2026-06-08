@@ -16,11 +16,13 @@ export default function DiffLine({
   sym,
   text,
   tone,
+  onClick,
 }: {
   lineNo?: number;
   sym?: "+" | "-";
   text: string;
   tone: DiffTone;
+  onClick?: () => void; // when set the row is a button (end-screen rationale toggle)
 }) {
   const bg =
     tone === "add"
@@ -36,13 +38,27 @@ export default function DiffLine({
         : "";
   const textColor = tone === "comment" || tone === "placeholder" ? "opacity-45" : "";
 
-  return (
-    <div className={`flex w-max min-w-full font-mono text-[13px] leading-[1.6] ${bg}`}>
+  const cls = `flex w-max min-w-full font-mono text-[13px] leading-[1.6] ${bg}`;
+  const body = (
+    <>
       <span className="w-10 shrink-0 select-none pr-2 pl-3 text-right tabular-nums opacity-40">
         {lineNo ?? ""}
       </span>
       <span className={`w-4 shrink-0 select-none text-center ${symColor}`}>{sym ?? ""}</span>
       <span className={`whitespace-pre pr-4 ${textColor}`}>{text || " "}</span>
-    </div>
+    </>
   );
+
+  if (onClick) {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        className={`${cls} cursor-pointer text-left transition hover:brightness-95 dark:hover:brightness-125`}
+      >
+        {body}
+      </button>
+    );
+  }
+  return <div className={cls}>{body}</div>;
 }

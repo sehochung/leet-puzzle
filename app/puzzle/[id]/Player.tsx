@@ -6,6 +6,7 @@ import type { Language, Puzzle } from "@/lib/puzzle";
 import { buildConstructedCode } from "@/lib/build-code";
 import ConstructedCode from "./ConstructedCode";
 import DiffPanel from "./DiffPanel";
+import ReviewDiff from "./ReviewDiff";
 
 type Answer = { chosen: 0 | 1 | 2 | 3; correct: boolean };
 
@@ -246,41 +247,55 @@ export default function Player({ puzzle }: { puzzle: Puzzle }) {
             </div>
           </div>
 
-          {/* Solution you built */}
-          <div className="mt-6">
-            <div className="mb-2 flex items-center justify-between">
-              <p className="text-xs font-semibold uppercase tracking-wide opacity-50">
-                Solution you built
-              </p>
-              <LangToggle language={language} setLanguage={setLanguage} />
+          {puzzle.constructionMode === "diff" ? (
+            /* Review — PR-style diff of your picks vs. the canonical; tap a line for why */
+            <div className="mt-6">
+              <div className="mb-2 flex items-center justify-between">
+                <p className="text-xs font-semibold uppercase tracking-wide opacity-50">Review</p>
+                <LangToggle language={language} setLanguage={setLanguage} />
+              </div>
+              <ReviewDiff puzzle={puzzle} picks={picks} language={language} />
+              <p className="mt-2 text-xs opacity-50">Tap any line to see the reasoning.</p>
             </div>
-            <pre className="overflow-x-auto rounded bg-black/5 p-3 text-xs leading-relaxed dark:bg-white/10">
-              <code>{buildConstructedCode(puzzle, 5, language)}</code>
-            </pre>
-          </div>
+          ) : (
+            <>
+              {/* Solution you built */}
+              <div className="mt-6">
+                <div className="mb-2 flex items-center justify-between">
+                  <p className="text-xs font-semibold uppercase tracking-wide opacity-50">
+                    Solution you built
+                  </p>
+                  <LangToggle language={language} setLanguage={setLanguage} />
+                </div>
+                <pre className="overflow-x-auto rounded bg-black/5 p-3 text-xs leading-relaxed dark:bg-white/10">
+                  <code>{buildConstructedCode(puzzle, 5, language)}</code>
+                </pre>
+              </div>
 
-          {/* Per-stage breakdown: which stages you nailed vs. missed */}
-          <div className="mt-5">
-            <p className="mb-2 text-xs font-semibold uppercase tracking-wide opacity-50">
-              Stage breakdown
-            </p>
-            <ul className="flex flex-col gap-2">
-              {puzzle.rounds.map((r, i) => {
-                const ok = answers[i]?.correct;
-                return (
-                  <li key={r.id} className="flex items-start gap-2 text-xs">
-                    <span className={`mt-1 font-bold ${ok ? "text-green-600" : "text-red-600"}`}>
-                      {ok ? "✓" : "✗"}
-                    </span>
-                    <span className="mt-1 w-20 shrink-0 font-semibold opacity-70">{r.stage}</span>
-                    <code className="min-w-0 flex-1 whitespace-pre-wrap break-words rounded bg-black/5 px-1.5 py-1 opacity-80 dark:bg-white/10">
-                      {r.options[r.correctIndex].fragments[language]}
-                    </code>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
+              {/* Per-stage breakdown: which stages you nailed vs. missed */}
+              <div className="mt-5">
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide opacity-50">
+                  Stage breakdown
+                </p>
+                <ul className="flex flex-col gap-2">
+                  {puzzle.rounds.map((r, i) => {
+                    const ok = answers[i]?.correct;
+                    return (
+                      <li key={r.id} className="flex items-start gap-2 text-xs">
+                        <span className={`mt-1 font-bold ${ok ? "text-green-600" : "text-red-600"}`}>
+                          {ok ? "✓" : "✗"}
+                        </span>
+                        <span className="mt-1 w-20 shrink-0 font-semibold opacity-70">{r.stage}</span>
+                        <code className="min-w-0 flex-1 whitespace-pre-wrap break-words rounded bg-black/5 px-1.5 py-1 opacity-80 dark:bg-white/10">
+                          {r.options[r.correctIndex].fragments[language]}
+                        </code>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            </>
+          )}
 
           <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
             <button
