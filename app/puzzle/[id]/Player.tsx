@@ -4,9 +4,11 @@ import { useState } from "react";
 import Link from "next/link";
 import type { Language, Puzzle } from "@/lib/puzzle";
 import { buildConstructedCode } from "@/lib/build-code";
+import { runSolution, parseEntryPoint, type TestRunResult } from "@/lib/run-python";
 import ConstructedCode from "./ConstructedCode";
 import DiffPanel from "./DiffPanel";
 import ReviewDiff from "./ReviewDiff";
+import TestResults from "./TestResults";
 
 type Answer = { chosen: 0 | 1 | 2 | 3; correct: boolean };
 
@@ -47,6 +49,7 @@ export default function Player({ puzzle }: { puzzle: Puzzle }) {
   const [answers, setAnswers] = useState<Array<Answer | null>>(EMPTY);
   const [phase, setPhase] = useState<Phase>("building");
   const [language, setLanguage] = useState<Language>("python");
+  const [results, setResults] = useState<TestRunResult[] | null>(null);
 
   // roundIdx is always within [0,4]; the guard satisfies the tuple's `| undefined`
   // under noUncheckedIndexedAccess.
@@ -80,15 +83,22 @@ export default function Player({ puzzle }: { puzzle: Puzzle }) {
     else setRoundIdx((i) => i + 1);
   }
 
-  // Phase 1: "Run" reveals the correctness diff without executing. Pyodide wiring replaces this.
-  function run() {
+  // Run the constructed Python in Pyodide against the tests, then reveal everything. runSolution
+  // never throws (load/syntax/per-test failures come back as error results), so no try/catch.
+  async function run() {
+    setPhase("running");
+    const code = buildConstructedCode(puzzle, 5, "python");
+    const entry = parseEntryPoint(puzzle.canonicalSolutions.python);
+    const r = await runSolution(code, entry, puzzle.tests);
+    setResults(r);
     setPhase("results");
   }
 
   function reset() {
     setRoundIdx(0);
     setAnswers(EMPTY);
-    setPhase("building"); // language intentionally kept
+    setResults(null);
+    setPhase("building"); // language intentionally kept; Pyodide stays loaded for the next run
   }
 
   function squareClass(idx: number): string {
@@ -111,7 +121,7 @@ export default function Player({ puzzle }: { puzzle: Puzzle }) {
   }
 
   const isBuilding = phase === "building";
-  const showBuildPanel = phase === "building" || phase === "ready";
+  const showBuildPanel = phase === "building" || phase === "ready" || phase === "running";
 
   return (
     <main className="mx-auto w-full max-w-2xl px-4 py-8">
@@ -210,16 +220,17 @@ export default function Player({ puzzle }: { puzzle: Puzzle }) {
         </button>
       )}
 
-      {/* [E] Ready — full neutral solution above; run it (Python) or switch to Python (Java) */}
-      {phase === "ready" && (
+      {/* [E] Ready/running — full neutral solution above; run it (Python) or switch to Python (Java) */}
+      {(phase === "ready" || phase === "running") && (
         <section className="mt-6">
           {language === "python" ? (
             <button
               type="button"
               onClick={run}
-              className="w-full rounded-lg bg-blue-600 px-4 py-3 font-semibold text-white transition-colors hover:bg-blue-700"
+              disabled={phase === "running"}
+              className="w-full rounded-lg bg-blue-600 px-4 py-3 font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-default disabled:opacity-70"
             >
-              Run solution →
+              {phase === "running" ? "Loading Python runtime…" : "Run solution →"}
             </button>
           ) : (
             <p className="rounded-lg border border-black/10 bg-black/[0.03] p-4 text-sm leading-relaxed opacity-80 dark:border-white/15 dark:bg-white/5">
@@ -227,7 +238,8 @@ export default function Player({ puzzle }: { puzzle: Puzzle }) {
               the review below works in either language.
             </p>
           )}
-          {language === "java" && Results()}
+          {/* Java has no run step, so the full reveal lives right here under the note. */}
+          {language === "java" && phase === "ready" && Results()}
         </section>
       )}
 
@@ -258,6 +270,19 @@ export default function Player({ puzzle }: { puzzle: Puzzle }) {
             ))}
           </div>
         </div>
+
+        {/* Test results — the payoff the build was aimed at; Python-only (Pyodide). */}
+        {language === "python" ? (
+          results && (
+            <div className="mt-6">
+              <TestResults results={results} />
+            </div>
+          )
+        ) : (
+          <p className="mt-6 rounded-lg border border-black/10 bg-black/[0.03] p-4 text-sm leading-relaxed opacity-80 dark:border-white/15 dark:bg-white/5">
+            Switch to Python to run your solution against the test cases — execution is Python-only.
+          </p>
+        )}
 
         {puzzle.constructionMode === "diff" ? (
           /* Review — PR-style diff of your picks vs. the canonical; tap a line for why */
