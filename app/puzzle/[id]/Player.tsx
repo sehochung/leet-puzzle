@@ -1,11 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import type { Language, Puzzle } from "@/lib/puzzle";
 import { buildConstructedCode } from "@/lib/build-code";
-import { runSolution, parseEntryPoint, type TestRunResult } from "@/lib/run-python";
+import { buildPartialRunnableCode } from "@/lib/partial-code";
+import {
+  preloadPyodide,
+  runSolution,
+  runTraced,
+  parseEntryPoint,
+  type TestRunResult,
+} from "@/lib/run-python";
 import ConstructedCode from "./ConstructedCode";
+import DebuggerPanel, { type PanelView } from "./DebuggerPanel";
 import DiffPanel from "./DiffPanel";
 import ReviewDiff from "./ReviewDiff";
 import TestResults from "./TestResults";
@@ -19,6 +27,10 @@ type Answer = { chosen: 0 | 1 | 2 | 3; correct: boolean };
 type Phase = "building" | "ready" | "running" | "results";
 
 const EMPTY: Array<Answer | null> = [null, null, null, null, null];
+
+// On desktop the page widens so the editor + debugger sit side by side; everything
+// else stays reading-width and centered.
+const NARROW = "lg:mx-auto lg:w-full lg:max-w-2xl";
 
 function LangToggle({
   language,
@@ -51,6 +63,46 @@ export default function Player({ puzzle }: { puzzle: Puzzle }) {
   const [phase, setPhase] = useState<Phase>("building");
   const [language, setLanguage] = useState<Language>("python");
   const [results, setResults] = useState<TestRunResult[] | null>(null);
+  const [panel, setPanel] = useState<PanelView>({ kind: "idle" });
+  const [runtimeReady, setRuntimeReady] = useState(false);
+  // Monotonic id so a stale trace can never overwrite a newer panel state.
+  const traceRunId = useRef(0);
+
+  // Rounds lock strictly in order, so the locked count is a prefix length — it drives how
+  // much of the editor is filled (with canonical code) and how far the partial run goes.
+  const lockedCount = answers.filter((a) => a !== null).length;
+
+  // Warm Pyodide as soon as the puzzle opens (lazy per site, eager per puzzle). A failed
+  // preload is ignored: the first real run retries and surfaces the error in the panel.
+  useEffect(() => {
+    let on = true;
+    preloadPyodide().then(
+      () => {
+        if (on) setRuntimeReady(true);
+      },
+      () => {},
+    );
+    return () => {
+      on = false;
+    };
+  }, []);
+
+  // After each lock (and on a Java→Python switch), run the partial program — canonical
+  // fragments for locked rounds, stubs for the rest — against the first test case and
+  // show STATE/TRACE/OUTPUT. `phase` is read but deliberately not a dependency: the
+  // building→ready transition happens at an unchanged lockedCount and needs no rerun.
+  useEffect(() => {
+    if (language !== "python" || lockedCount === 0) return;
+    if (phase === "running" || phase === "results") return;
+    const id = ++traceRunId.current;
+    setPanel({ kind: "loading" });
+    const { code, stubReturnLine } = buildPartialRunnableCode(puzzle, lockedCount);
+    const entry = parseEntryPoint(puzzle.canonicalSolutions.python);
+    void runTraced(code, entry, puzzle.tests[0]?.input, stubReturnLine).then((trace) => {
+      if (traceRunId.current === id) setPanel({ kind: "trace", trace });
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lockedCount, language, puzzle]);
 
   // roundIdx is always within [0,4]; the guard satisfies the tuple's `| undefined`
   // under noUncheckedIndexedAccess.
@@ -63,9 +115,6 @@ export default function Player({ puzzle }: { puzzle: Puzzle }) {
   const correctCount = answers.filter((a) => a?.correct).length;
   // The player's OWN pick per round (null until answered) — drives the end-screen review.
   const picks = answers.map((a) => (a ? a.chosen : null));
-  // Rounds lock strictly in order, so the locked count is a prefix length — it drives how
-  // much of the editor is filled (with canonical code).
-  const lockedCount = answers.filter((a) => a !== null).length;
 
   // First click locks the round (score is first-pick correctness) and reveals immediately;
   // the editor fills the canonical fragment either way (corrective build). The guard lives
@@ -102,6 +151,8 @@ export default function Player({ puzzle }: { puzzle: Puzzle }) {
     setRoundIdx(0);
     setAnswers(EMPTY);
     setResults(null);
+    traceRunId.current++; // invalidate any in-flight trace
+    setPanel({ kind: "idle" });
     setPhase("building"); // language intentionally kept; Pyodide stays loaded for the next run
   }
 
@@ -135,13 +186,13 @@ export default function Player({ puzzle }: { puzzle: Puzzle }) {
   const showBuildPanel = phase === "building" || phase === "ready" || phase === "running";
 
   return (
-    <main className="mx-auto w-full max-w-2xl px-4 py-8">
+    <main className="mx-auto w-full max-w-2xl px-4 py-8 lg:max-w-5xl">
       <Link href="/" className="text-sm opacity-60 transition-colors hover:opacity-100">
         ← All puzzles
       </Link>
 
       {/* [A] Progress strip */}
-      <div className="mt-4 grid grid-cols-5 gap-2">
+      <div className={`mt-4 grid grid-cols-5 gap-2 ${NARROW}`}>
         {puzzle.rounds.map((r, idx) => (
           <div
             key={r.id}
@@ -153,7 +204,9 @@ export default function Player({ puzzle }: { puzzle: Puzzle }) {
       </div>
 
       {/* [B] Base problem card */}
-      <section className="mt-6 rounded-lg border border-black/10 p-5 dark:border-white/15">
+      <section
+        className={`mt-6 rounded-lg border border-black/10 p-5 dark:border-white/15 ${NARROW}`}
+      >
         <h1 className="text-xl font-bold tracking-tight">{puzzle.title}</h1>
         <p className="mt-2 text-sm leading-relaxed opacity-80">{puzzle.baseProblem.statement}</p>
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
@@ -172,29 +225,38 @@ export default function Player({ puzzle }: { puzzle: Puzzle }) {
         </div>
       </section>
 
-      {/* [B2] Construction panel — the code editor: every locked round holds the CANONICAL
-          fragment (corrective build), unlocked rounds a placeholder. Canonical-only is the
+      {/* [B2] Editor + debugger — side by side on desktop, stacked on mobile. The editor
+          fills every locked round with the CANONICAL fragment (corrective build); the
+          debugger shows the partial program actually running. Canonical-only is the
           preserved session-004 fallback. */}
       {showBuildPanel && (
-        <section className="mt-6">
-          <div className="mb-2 flex justify-end">
-            <LangToggle language={language} setLanguage={setLanguage} />
+        <section className="mt-6 lg:grid lg:grid-cols-2 lg:items-start lg:gap-4">
+          <div>
+            <div className="mb-2 flex justify-end">
+              <LangToggle language={language} setLanguage={setLanguage} />
+            </div>
+            {puzzle.constructionMode === "diff" ? (
+              <DiffPanel puzzle={puzzle} filledThroughRound={lockedCount} language={language} />
+            ) : (
+              <ConstructedCode
+                puzzle={puzzle}
+                completedThroughRound={lockedCount}
+                language={language}
+              />
+            )}
           </div>
-          {puzzle.constructionMode === "diff" ? (
-            <DiffPanel puzzle={puzzle} filledThroughRound={lockedCount} language={language} />
-          ) : (
-            <ConstructedCode
-              puzzle={puzzle}
-              completedThroughRound={lockedCount}
-              language={language}
-            />
-          )}
+          <div className="mt-4 lg:mt-0">
+            <div className="mb-2 flex h-7 items-center">
+              <p className="text-xs font-semibold uppercase tracking-wide opacity-50">Debugger</p>
+            </div>
+            <DebuggerPanel view={panel} language={language} runtimeReady={runtimeReady} />
+          </div>
         </section>
       )}
 
       {/* [C] Active round — one pick, then it locks and reveals */}
       {isBuilding && (
-        <section className="mt-6">
+        <section className={`mt-6 ${NARROW}`}>
           <p className="text-xs font-semibold uppercase tracking-wide opacity-50">
             Round {roundIdx + 1} of 5 · {round.stage}
           </p>
@@ -217,18 +279,20 @@ export default function Player({ puzzle }: { puzzle: Puzzle }) {
 
       {/* [D] Next round — only once the current round has a selection */}
       {isBuilding && current && (
-        <button
-          type="button"
-          onClick={next}
-          className="mt-5 w-full rounded-lg bg-blue-600 px-4 py-3 font-semibold text-white transition-colors hover:bg-blue-700"
-        >
-          {isLast ? "Done — review →" : "Next round →"}
-        </button>
+        <div className={NARROW}>
+          <button
+            type="button"
+            onClick={next}
+            className="mt-5 w-full rounded-lg bg-blue-600 px-4 py-3 font-semibold text-white transition-colors hover:bg-blue-700"
+          >
+            {isLast ? "Done — review →" : "Next round →"}
+          </button>
+        </div>
       )}
 
-      {/* [E] Ready/running — full neutral solution above; run it (Python) or switch to Python (Java) */}
+      {/* [E] Ready/running — full solution above; run it (Python) or switch to Python (Java) */}
       {(phase === "ready" || phase === "running") && (
-        <section className="mt-6">
+        <section className={`mt-6 ${NARROW}`}>
           {language === "python" ? (
             <button
               type="button"
@@ -259,7 +323,9 @@ export default function Player({ puzzle }: { puzzle: Puzzle }) {
   // ReviewDiff and its rationale-toggle state survives a language switch.
   function Results() {
     return (
-      <section className="mt-6 rounded-lg border border-black/10 p-6 dark:border-white/15">
+      <section
+        className={`mt-6 rounded-lg border border-black/10 p-6 dark:border-white/15 ${NARROW}`}
+      >
         <div className="text-center">
           <p className="text-sm uppercase tracking-wide opacity-50">Your score</p>
           <p className="mt-1 text-5xl font-bold tabular-nums">{correctCount}/5</p>
