@@ -119,6 +119,48 @@ function constructionMode(data) {
   return allFilled ? "diff" : "canonical-only";
 }
 
+// Bridges (puzzles/bridges.json) shape gate. Companion file, optional — a missing
+// file is fine (the app falls back to generic bridge text). Checked here so a typo'd
+// round key or a bridge pointing at the CORRECT option fails the build, not the player.
+// Word limits mirror the authoring rubric (question < 30 words, follow_up < 25).
+function wordCount(s) {
+  return s.split(/\s+/).filter((w) => /[a-z0-9]/i.test(w)).length;
+}
+function validateBridges(bridges, puzzlesById) {
+  assert(isRecord(bridges), "bridges", "expected object");
+  const counts = [];
+  for (const [pid, rounds] of Object.entries(bridges)) {
+    const puzzle = puzzlesById.get(pid);
+    assert(puzzle !== undefined, `bridges.${pid}`, "no such puzzle");
+    assert(isRecord(rounds), `bridges.${pid}`, "expected object");
+    let n = 0;
+    const roundSet = new Set();
+    for (const [rkey, opts] of Object.entries(rounds)) {
+      const m = rkey.match(/^round-([1-5])$/);
+      assert(m !== null, `bridges.${pid}.${rkey}`, "expected round-1..round-5");
+      const round = puzzle.rounds[Number(m[1]) - 1];
+      assert(isRecord(opts), `bridges.${pid}.${rkey}`, "expected object");
+      for (const [okey, bridge] of Object.entries(opts)) {
+        const path = `bridges.${pid}.${rkey}.${okey}`;
+        const oi = Number(okey);
+        assert(/^[0-3]$/.test(okey), path, "expected option index 0..3");
+        assert(oi !== round.correctIndex, path, "bridge targets the CORRECT option");
+        assert(isRecord(bridge), path, "expected object");
+        const q = nonEmptyStr(bridge.question, `${path}.question`);
+        const t = nonEmptyStr(bridge.trace_setup, `${path}.trace_setup`);
+        const f = nonEmptyStr(bridge.follow_up, `${path}.follow_up`);
+        assert(wordCount(q) <= 30, `${path}.question`, `over 30 words (${wordCount(q)})`);
+        assert(wordCount(f) <= 25, `${path}.follow_up`, `over 25 words (${wordCount(f)})`);
+        assert(t.split("\n").length <= 20, `${path}.trace_setup`, "over 20 lines");
+        n++;
+        roundSet.add(rkey);
+      }
+    }
+    counts.push(`${pid}: ${n} bridges across ${roundSet.size} rounds`);
+  }
+  return counts;
+}
+
 const only = process.argv.slice(2); // optional: basenames to restrict to, e.g. puzzle-001
 const all = (await readdir(PUZZLES_DIR)).filter((f) => /^puzzle-\d{3}\.json$/.test(f)).sort();
 const files = only.length
@@ -126,16 +168,36 @@ const files = only.length
   : all;
 
 let failures = 0;
+const puzzlesById = new Map();
 for (const file of files) {
   try {
     const data = JSON.parse(await readFile(join(PUZZLES_DIR, file), "utf8"));
     validateShape(data);
     validateCompose(data);
+    puzzlesById.set(data.id, data);
     console.log(`PASS ${file} (${constructionMode(data)} mode)`);
   } catch (err) {
     failures++;
     console.error(`FAIL ${file}: ${err.message}`);
   }
 }
+
+// Bridges are validated only on full runs (a filtered run may not have loaded the
+// puzzles the bridges reference).
+let bridgeFailures = 0;
+if (only.length === 0) {
+  try {
+    const raw = await readFile(join(PUZZLES_DIR, "bridges.json"), "utf8").catch(() => null);
+    if (raw !== null) {
+      for (const line of validateBridges(JSON.parse(raw), puzzlesById)) {
+        console.log(`PASS bridges ${line}`);
+      }
+    }
+  } catch (err) {
+    bridgeFailures++;
+    console.error(`FAIL bridges.json: ${err.message}`);
+  }
+}
+
 console.log(`\n${files.length - failures}/${files.length} passed`);
-process.exit(failures > 0 ? 1 : 0);
+process.exit(failures + bridgeFailures > 0 ? 1 : 0);

@@ -82,6 +82,41 @@ async function runOne(file) {
   return problems;
 }
 
+// Bridge trace_setup gate: every snippet must run to completion (intentional errors
+// are caught-and-printed inside the snippet) and produce stdout — the demonstration IS
+// the stdout. This doesn't violate the "only canonical runs" rule: bridges are authored
+// demonstrations, not distractor gating. `--show-bridges` dumps each snippet's output
+// for content review.
+async function runBridges(showOutput) {
+  const raw = await readFile(join(PUZZLES_DIR, "bridges.json"), "utf8").catch(() => null);
+  if (raw === null || !PYTHON) return 0;
+  let failures = 0;
+  const dir = await mkdtemp(join(tmpdir(), "iit-bridges-"));
+  try {
+    for (const [pid, rounds] of Object.entries(JSON.parse(raw))) {
+      for (const [rkey, opts] of Object.entries(rounds)) {
+        for (const [okey, bridge] of Object.entries(opts)) {
+          const name = `${pid} ${rkey} option ${okey}`;
+          const p = join(dir, "bridge.py");
+          await writeFile(p, bridge.trace_setup, "utf8");
+          const r = spawnSync(PYTHON, [p], { encoding: "utf8", timeout: 15000 });
+          if (r.status !== 0 || !(r.stdout || "").trim()) {
+            failures++;
+            console.error(`FAIL bridge ${name}:\n${r.stderr || r.stdout || "no output"}`);
+          } else if (showOutput) {
+            console.log(`--- ${name} ---\n${r.stdout.trimEnd()}`);
+          } else {
+            console.log(`PASS bridge ${name}`);
+          }
+        }
+      }
+    }
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+  return failures;
+}
+
 const only = process.argv.slice(2).filter((a) => !a.startsWith("--"));
 const all = (await readdir(PUZZLES_DIR)).filter((f) => /^puzzle-\d{3}\.json$/.test(f)).sort();
 const files = only.length ? all.filter((f) => only.some((o) => f === o || f === `${o}.json`)) : all;
@@ -100,5 +135,6 @@ for (const file of files) {
     console.error(`FAIL ${file}:\n${hard.join("\n")}`);
   }
 }
-console.log(`\n${files.length - failures}/${files.length} passed`);
-process.exit(failures > 0 ? 1 : 0);
+const bridgeFailures = only.length ? 0 : await runBridges(process.argv.includes("--show-bridges"));
+console.log(`\n${files.length - failures}/${files.length} passed${bridgeFailures ? `; ${bridgeFailures} bridge snippets failed` : ""}`);
+process.exit(failures + bridgeFailures > 0 ? 1 : 0);

@@ -1,0 +1,298 @@
+{
+  "puzzle-001": {
+    "round-1": {
+      "1": {
+        "question": "You chose a flat list. If we just append every string to it as we scan, what shape will the output have?",
+        "trace_setup": "strs = ['eat', 'tea', 'tan', 'ate', 'nat', 'bat']\nresult = []\nfor s in strs:\n    result.append(s)\nprint('your output:', result)\nprint('expected:', [['eat','tea','ate'],['tan','nat'],['bat']])",
+        "follow_up": "A flat list can't keep separate buckets — but next we'll compute something for each string that could let us group them."
+      },
+      "2": {
+        "question": "A set remembers which strings have appeared. When 'ate' shows up, how would it find 'eat' and 'tea' to stand beside them?",
+        "trace_setup": "strs = ['eat', 'tea', 'tan', 'ate', 'nat', 'bat']\nseen = set()\nfor s in strs:\n    seen.add(s)\nprint('the set:', sorted(seen))\nprint('it answers has-this-appeared, but holds no groups at all')\nprint('expected:', [['eat','tea','ate'],['tan','nat'],['bat']])",
+        "follow_up": "Membership isn't grouping — keep in mind that each string will need a bucket to land in as we scan."
+      }
+    },
+    "round-2": {
+      "0": {
+        "question": "You chose to loop over indices 0..5. What does the loop body actually need at each step — the position, or the string itself?",
+        "trace_setup": "strs = ['eat', 'tea', 'tan', 'ate', 'nat', 'bat']\nfor i in range(len(strs)):\n    print('i =', i, '-> the body still has to write strs[i] to reach', repr(strs[i]))\nprint('the loop hands you positions; everything you do next wants the string itself')",
+        "follow_up": "Either loop visits every string; the real question is coming — what value do anagrams share that other strings don't?"
+      }
+    },
+    "round-3": {
+      "0": {
+        "question": "You keyed by length. 'eat' and 'bat' both have three letters — should they share a bucket?",
+        "trace_setup": "strs = ['eat', 'tea', 'tan', 'ate', 'nat', 'bat']\ngroups = {}\nfor s in strs:\n    key = len(s)\n    groups.setdefault(key, []).append(s)\nprint('your groups:', list(groups.values()))\nprint('expected:', [['eat','tea','ate'],['tan','nat'],['bat']])",
+        "follow_up": "The key must capture which letters, and how many. With a faithful key, filing each string under it is the easy part."
+      },
+      "1": {
+        "question": "You chose the set of distinct characters. What happens to words that share letters but repeat them differently, like 'aab' and 'ab'?",
+        "trace_setup": "strs = ['eat', 'tea', 'tan', 'ate', 'nat', 'bat']\ngroups = {}\nfor s in strs:\n    groups.setdefault(frozenset(s), []).append(s)\nprint('on this input:', list(groups.values()))\nprint(\"but frozenset('aab') == frozenset('ab') ->\", frozenset('aab') == frozenset('ab'))\nprint(\"'aab' and 'ab' are not anagrams, yet they would share a bucket\")",
+        "follow_up": "A faithful fingerprint keeps letter counts too. Once the key is honest, recording each string under it comes next."
+      }
+    },
+    "round-4": {
+      "0": {
+        "question": "Rebuilding the bucket with + makes a fresh copy on every insert. How much copying does that add up to on a big input?",
+        "trace_setup": "strs = ['eat', 'tea', 'tan', 'ate', 'nat', 'bat'] * 50  # same classes, 300 strings\ngroups = {}\ncopies = 0\nfor s in strs:\n    key = ''.join(sorted(s))\n    old = groups.get(key, [])\n    copies += len(old)  # + rebuilds the whole bucket each time\n    groups[key] = old + [s]\nprint('strings processed:', len(strs))\nprint('elements copied while rebuilding buckets:', copies)\nprint('append-in-place copies nothing — rebuilding grows quadratically with bucket size')",
+        "follow_up": "The grouping itself is sound; only the cost is off. Last step: hand the groups back in the promised shape."
+      },
+      "2": {
+        "question": "You assigned groups[key] = s. When 'tea' arrives at a key that already holds 'eat', what happens to 'eat'?",
+        "trace_setup": "strs = ['eat', 'tea', 'tan', 'ate', 'nat', 'bat']\ngroups = {}\nfor s in strs:\n    key = ''.join(sorted(s))\n    groups[key] = s\nprint('your groups:', groups)\nprint('expected:', [['eat','tea','ate'],['tan','nat'],['bat']])",
+        "follow_up": "Each bucket has to accumulate, not replace. Then all that's left is returning the groups in the right shape."
+      }
+    },
+    "round-5": {
+      "1": {
+        "question": "You returned the dict itself. The caller asked for groups — what extra baggage does a keyed map hand them?",
+        "trace_setup": "strs = ['eat', 'tea', 'tan', 'ate', 'nat', 'bat']\ngroups = {}\nfor s in strs:\n    groups.setdefault(''.join(sorted(s)), []).append(s)\nprint('your return value:', groups)\nprint('expected:', [['eat','tea','ate'],['tan','nat'],['bat']])\nprint('the data is all there — but the contract is a list of groups, not a keyed map')",
+        "follow_up": "The values inside the map are exactly the groups — watch the tests compare shapes, not just contents."
+      }
+    }
+  },
+  "puzzle-002": {
+    "round-1": {
+      "2": {
+        "question": "You chose a set of values. When 7 appears and 2 is already in the set, what do you return — and from where?",
+        "trace_setup": "nums, target = [2, 7, 11, 15], 9\nseen = set()\nfor x in nums:\n    need = target - x\n    if need in seen:\n        print('found a pair of values:', need, '+', x, '=', target)\n        print('but the answer must be their INDICES, and the set never stored any')\n    seen.add(x)\nprint('expected:', [0, 1])",
+        "follow_up": "Whatever structure you keep, positions have to ride along — watch what the scan itself can hand you next."
+      }
+    },
+    "round-2": {
+      "1": {
+        "question": "Looping over values only, you can spot that 2 and 7 pair up — but what does the contract ask you to return?",
+        "trace_setup": "nums, target = [2, 7, 11, 15], 9\nfor x in nums:\n    need = target - x\n    if need in nums:\n        print('values', need, 'and', x, 'sum to', target)\n        break\nprint('but the contract wants positions:', [0, 1])\nprint('iterating values only, no index is ever in hand to return')",
+        "follow_up": "With positions riding along, the next move is asking what value would complete the element you're holding."
+      },
+      "2": {
+        "question": "Nested loops check every pair. On four numbers that's six checks — what does it cost when the array has 100,000?",
+        "trace_setup": "nums, target = [2, 7, 11, 15], 9\nchecks = 0\nfor i in range(len(nums)):\n    for j in range(i + 1, len(nums)):\n        checks += 1\n        if nums[i] + nums[j] == target:\n            print('found', [i, j], 'after', checks, 'pair checks')\nn = 100000\nprint('pairs to check at n = 100k:', n * (n - 1) // 2)\nprint('one pass with a map needs about', n, 'lookups')",
+        "follow_up": "It finds the answer, just slowly. One pass is enough once each element knows exactly what to look for."
+      }
+    },
+    "round-3": {
+      "1": {
+        "question": "You compute need = target + x. For x = 2 that hunts for 11 — what do 2 and 11 actually sum to?",
+        "trace_setup": "nums, target = [2, 7, 11, 15], 9\nfor x in nums:\n    need = target + x\n    print('at x =', x, 'you search for', need, '-> together they sum to', x + need, ', not', target)\nprint('expected:', [0, 1], 'because 2 + 7 = 9')",
+        "follow_up": "Once the complement is right, the order of checking versus storing matters more than it looks — that's next."
+      }
+    },
+    "round-4": {
+      "0": {
+        "question": "You store x before checking. When an element's complement is itself, what stops it from matching its own entry?",
+        "trace_setup": "nums, target = [2, 7, 11, 15], 9\nseen = {}\nfor i, x in enumerate(nums):\n    seen[x] = i\n    need = target - x\n    if need in seen:\n        print('this input survives:', [seen[need], i])\n        break\nnums2, target2 = [5, 3, 4], 10\nseen = {}\nfor i, x in enumerate(nums2):\n    seen[x] = i\n    need = target2 - x\n    if need in seen:\n        print('but nums', nums2, 'target', target2, 'returns', [seen[need], i], '- index', i, 'used twice')\n        break",
+        "follow_up": "Sequence the two operations so a match can only ever be an earlier element. The fallback return is the easy part."
+      }
+    }
+  },
+  "puzzle-003": {
+    "round-1": {
+      "0": {
+        "question": "Two pointers on the raw string: the very first comparison is 'A' versus 'a'. What verdict does that produce?",
+        "trace_setup": "s = 'A man, a plan, a canal: Panama'\nlo, hi = 0, len(s) - 1\nwhile lo < hi:\n    if s[lo] != s[hi]:\n        print('mismatch:', repr(s[lo]), 'vs', repr(s[hi]), 'at positions', (lo, hi), '-> returns False')\n        break\n    lo += 1; hi -= 1\nprint('expected: True — case, spaces and punctuation were never filtered out')",
+        "follow_up": "Once only the meaningful characters remain, think about how far the two ends actually need to travel."
+      },
+      "1": {
+        "question": "You reversed the whole string. With commas and spaces still inside, where do they sit after the flip?",
+        "trace_setup": "s = 'A man, a plan, a canal: Panama'\nrev = s[::-1]\nprint('s  :', repr(s))\nprint('rev:', repr(rev))\nprint('s == rev ->', s == rev, '(expected: True)')\nprint('the punctuation lands in different spots, so the raw strings can never match')",
+        "follow_up": "Filtering first changes everything. After that, the scan only needs to know when the two ends should stop."
+      }
+    },
+    "round-2": {
+      "2": {
+        "question": "while lo <= hi keeps going when the pointers meet. What is cleaned[lo] compared against on that final pass?",
+        "trace_setup": "cleaned = [c.lower() for c in 'A man, a plan, a canal: Panama' if c.isalnum()]\nlo, hi, comparisons = 0, len(cleaned) - 1, 0\nwhile lo <= hi:\n    comparisons += 1\n    if lo == hi:\n        print('comparison', comparisons, ':', repr(cleaned[lo]), 'against itself — the middle character')\n    if cleaned[lo] != cleaned[hi]:\n        break\n    lo += 1; hi -= 1\nprint('still True, but', comparisons, 'comparisons ran where', len(cleaned) // 2, 'suffice')",
+        "follow_up": "It works — one wasted check is the only cost. Next, make sure the bail-out fires on the right evidence."
+      }
+    },
+    "round-3": {
+      "0": {
+        "question": "You bail out when the characters are EQUAL. The first pair is 'a' and 'a' — what does your check do with that?",
+        "trace_setup": "cleaned = [c.lower() for c in 'A man, a plan, a canal: Panama' if c.isalnum()]\nlo, hi = 0, len(cleaned) - 1\nwhile lo < hi:\n    if cleaned[lo] == cleaned[hi]:\n        print('first pair:', repr(cleaned[lo]), '==', repr(cleaned[hi]), '-> bails with False immediately')\n        break\n    lo += 1; hi -= 1\nprint('expected: True — matching ends are evidence FOR a palindrome, not against it')",
+        "follow_up": "A mismatch is the only disproof. With the check settled, the pointers' movement is the last moving part."
+      }
+    },
+    "round-4": {
+      "1": {
+        "question": "Only lo advances; hi stays parked on the last 'a'. What is every later character compared against?",
+        "trace_setup": "cleaned = [c.lower() for c in 'A man, a plan, a canal: Panama' if c.isalnum()]\nlo, hi = 0, len(cleaned) - 1\nwhile lo < hi:\n    print('compare', repr(cleaned[lo]), 'vs', repr(cleaned[hi]), ' (hi parked at', hi, ')')\n    if cleaned[lo] != cleaned[hi]:\n        print('-> False, because lo keeps meeting the same last character')\n        break\n    lo += 1\nprint('expected: True')",
+        "follow_up": "Both ends carry information, so both must move. Then the fall-through answer almost writes itself."
+      }
+    }
+  },
+  "puzzle-004": {
+    "round-1": {
+      "2": {
+        "question": "You sorted the heights. The two 8s become neighbors — how wide is the container between them now, versus in the original?",
+        "trace_setup": "height = [1, 8, 6, 2, 5, 4, 8, 3, 7]\nhs = sorted(height)\nlo, hi, best = 0, len(hs) - 1, 0\nwhile lo < hi:\n    best = max(best, min(hs[lo], hs[hi]) * (hi - lo))\n    if hs[lo] < hs[hi]: lo += 1\n    else: hi -= 1\nprint('sorted copy:', hs)\nprint('best on the sorted copy:', best)\nprint('expected: 49 — sorting moved the walls; the real 8s stand 5 apart, not side by side')",
+        "follow_up": "Position is half of every area. Keep the walls where they stand, and think about how long the sweep must run."
+      }
+    },
+    "round-3": {
+      "0": {
+        "question": "You add the two walls together. Water above the shorter wall has nothing holding it in — which wall sets the true level?",
+        "trace_setup": "height = [1, 8, 6, 2, 5, 4, 8, 3, 7]\nlo, hi = 0, len(height) - 1\nclaimed = (height[lo] + height[hi]) * (hi - lo)\nactual = min(height[lo], height[hi]) * (hi - lo)\nprint('first pair: walls', height[lo], 'and', height[hi], ', width', hi - lo)\nprint('your formula claims:', claimed)\nprint('water actually held:', actual, '— everything above the', min(height[lo], height[hi]), '-high wall spills out')",
+        "follow_up": "Score with the limiting wall, and deciding which pointer to move becomes the whole game."
+      },
+      "1": {
+        "question": "You scored with the taller wall. Picture walls of height 1 and 7 — can that container really hold water seven deep?",
+        "trace_setup": "height = [1, 8, 6, 2, 5, 4, 8, 3, 7]\nlo, hi = 0, len(height) - 1\nclaimed = max(height[lo], height[hi]) * (hi - lo)\nactual = min(height[lo], height[hi]) * (hi - lo)\nprint('first pair: walls', height[lo], 'and', height[hi], ', width', hi - lo)\nprint('your formula claims:', claimed)\nprint('water actually held:', actual, '— the level can only reach the shorter wall')",
+        "follow_up": "The short wall is the ceiling. With areas honest, which pointer to move is the next insight."
+      }
+    },
+    "round-4": {
+      "2": {
+        "question": "You discard the taller wall each step. The 1-high wall stays in every later window — what caps every area it touches?",
+        "trace_setup": "height = [1, 8, 6, 2, 5, 4, 8, 3, 7]\nlo, hi, best = 0, len(height) - 1, 0\nwhile lo < hi:\n    best = max(best, min(height[lo], height[hi]) * (hi - lo))\n    if height[lo] < height[hi]: hi -= 1  # throws away the TALLER wall\n    else: lo += 1\nprint('best when you keep discarding the taller wall:', best)\nprint('expected: 49 — the short wall is the limit, so only replacing IT can ever help')",
+        "follow_up": "Drop the limiter and hope survives. After the sweep, mind exactly which number you hand back."
+      }
+    },
+    "round-5": {
+      "1": {
+        "question": "You return area — the last one computed. The final window is one cell wide; how big can that area be?",
+        "trace_setup": "height = [1, 8, 6, 2, 5, 4, 8, 3, 7]\nlo, hi, best = 0, len(height) - 1, 0\nwhile lo < hi:\n    area = min(height[lo], height[hi]) * (hi - lo)\n    best = max(best, area)\n    if height[lo] < height[hi]: lo += 1\n    else: hi -= 1\nprint('last area computed:', area, '(the final, narrowest window)')\nprint('best seen along the way:', best)",
+        "follow_up": "The sweep already met the answer along the way — it just has to remember it."
+      }
+    }
+  },
+  "puzzle-005": {
+    "round-1": {
+      "2": {
+        "question": "A set window works — but when a repeat appears, how many single steps must the left edge take to walk past it?",
+        "trace_setup": "s = 'abcabcbb'\nwindow, start, best, evictions = set(), 0, 0, 0\nfor i, c in enumerate(s):\n    while c in window:\n        window.discard(s[start]); start += 1; evictions += 1\n    window.add(c)\n    best = max(best, i - start + 1)\nprint('answer:', best, '(correct!) — but the window shrank one char at a time:', evictions, 'evictions')\nprint('a last-seen-index map jumps start straight past the repeat instead')",
+        "follow_up": "Evicting one-by-one is the slow half. A map of last positions lets the start leap — watch how the scan uses indices."
+      }
+    },
+    "round-3": {
+      "0": {
+        "question": "You reset start to 0 on a repeat. Everything already passed re-enters the window — including the repeat itself?",
+        "trace_setup": "s = 'abcabcbb'\nlast, start, best = {}, 0, 0\nfor i, c in enumerate(s):\n    if c in last:\n        start = 0\n    last[c] = i\n    best = max(best, i - start + 1)\nprint('your answer:', best)\nprint('expected: 3 — start fell back to 0, so the window re-admitted every repeat it had escaped')",
+        "follow_up": "The start should only ever move forward, and exactly far enough. Then it's bookkeeping: record and measure."
+      },
+      "1": {
+        "question": "You nudge start forward by one. If the earlier copy sits four characters back, is one step enough to evict it?",
+        "trace_setup": "s = 'abcabcbb'\nlast, start, best = {}, 0, 0\nfor i, c in enumerate(s):\n    if c in last:\n        start += 1\n    window = s[start:i + 1]\n    if len(set(window)) != len(window):\n        print('window counted as repeat-free:', repr(window), '<- still contains a repeat')\n    last[c] = i\n    best = max(best, i - start + 1)\nprint('one nudge is not always enough — the earlier copy may sit far behind start')",
+        "follow_up": "The map knows exactly where the old copy is — jump straight past it. Then record and measure each step."
+      }
+    },
+    "round-4": {
+      "0": {
+        "question": "You never store last[c] = i. The next time c appears, what does the lookup find?",
+        "trace_setup": "s = 'abcabcbb'\nlast, start, best = {}, 0, 0\nfor i, c in enumerate(s):\n    if c in last and last[c] >= start:\n        start = last[c] + 1\n    best = max(best, i - start + 1)  # last[c] = i never happens\nprint('your answer:', best)\nprint('expected: 3 — with no positions recorded, no repeat is ever detected and the window never shrinks')",
+        "follow_up": "Recording as you go is what arms the repeat check. The return itself is then trivial."
+      },
+      "3": {
+        "question": "You assign best = i - start + 1 instead of taking the max. What happens when the final window is short?",
+        "trace_setup": "s = 'abcabcbb'\nlast, start, best = {}, 0, 0\nfor i, c in enumerate(s):\n    if c in last and last[c] >= start:\n        start = last[c] + 1\n    last[c] = i\n    best = i - start + 1  # assignment forgets earlier, longer windows\nprint('your answer:', best)\nprint(\"expected: 3 — the final window 'b' overwrote the length-3 windows found earlier\")",
+        "follow_up": "best is a high-water mark. Guard it with max, and the answer is sitting in it at the end."
+      }
+    }
+  },
+  "puzzle-006": {
+    "round-1": {
+      "0": {
+        "question": "You kept set(t). If t were 'AABC', the set holds a single A — how would a window ever prove it covered two?",
+        "trace_setup": "s, t = 'ADOBECODEBANC', 'ABC'\nprint(\"set('ABC') =\", sorted(set(t)), '— fine here, every required char is unique')\nt2 = 'AABC'\nprint(\"set('AABC') =\", sorted(set(t2)), '— the second A just vanished')\nprint('a window with ONE A would look complete for', repr(t2), 'even though two are required')",
+        "follow_up": "Counts, not membership. Once requirements are countable, growing the window is the easy half of the dance."
+      }
+    },
+    "round-3": {
+      "1": {
+        "question": "You decrement need[c] but never touch missing. What ever tells the loop that the window became valid?",
+        "trace_setup": "s, t = 'ADOBECODEBANC', 'ABC'\nfrom collections import Counter\nneed, missing, best = Counter(t), len(t), ''\nfor right, c in enumerate(s):\n    need[c] -= 1  # but missing never moves\n    if missing == 0:\n        best = s[:right + 1]\nprint('after the whole scan, missing is still', missing)\nprint('your answer:', repr(best))\nprint(\"expected: 'BANC' — the valid-window check never fired because missing never reached 0\")",
+        "follow_up": "Validity has to become observable in O(1). Once it is, contracting is where the minimum gets found."
+      }
+    },
+    "round-4": {
+      "1": {
+        "question": "You record once and never move left. Every window starts at index 0 — what's the shortest window you can ever see?",
+        "trace_setup": "s, t = 'ADOBECODEBANC', 'ABC'\nfrom collections import Counter\nneed, missing, left, best = Counter(t), len(t), 0, ''\nfor right, c in enumerate(s):\n    if need[c] > 0: missing -= 1\n    need[c] -= 1\n    if missing == 0 and (best == '' or right - left + 1 < len(best)):\n        best = s[left:right + 1]  # records, but left never advances\nprint('your answer:', repr(best))\nprint(\"expected: 'BANC' — anchored at 0, no window can ever be shorter than the first valid one\")",
+        "follow_up": "Shrink while the window survives, giving back what leaves it. The return is then just best."
+      },
+      "3": {
+        "question": "You shrink without restoring counts. As left marches on, what would ever make 'missing' rise and stop the loop?",
+        "trace_setup": "s, t = 'ADOBECODEBANC', 'ABC'\nfrom collections import Counter\nneed, missing, left, best = Counter(t), len(t), 0, ''\nstuck = False\nfor right, c in enumerate(s):\n    if need[c] > 0: missing -= 1\n    need[c] -= 1\n    while missing == 0 and not stuck:\n        best = s[left:right + 1]\n        left += 1\n        if left > len(s):\n            stuck = True  # in real code this loop simply never ends\nprint('left marched to', left, 'and missing is still', missing, '— the loop had no way to stop')\nprint('expected: BANC — each char leaving the window must be handed back to the counts')",
+        "follow_up": "Every departure gets paid back into the counts — that symmetry is the whole trick. Then return best."
+      }
+    }
+  },
+  "puzzle-007": {
+    "round-2": {
+      "2": {
+        "question": "while lo < hi stops when a single cell remains. On this input that cell holds 0 — your target. What checks it?",
+        "trace_setup": "nums, target = [4, 5, 6, 7, 0, 1, 2], 0\nlo, hi = 0, len(nums) - 1\nwhile lo < hi:\n    mid = (lo + hi) // 2\n    if nums[mid] == target:\n        print('found at', mid); break\n    if nums[lo] <= nums[mid]:\n        if nums[lo] <= target < nums[mid]: hi = mid - 1\n        else: lo = mid + 1\n    else:\n        if nums[mid] < target <= nums[hi]: lo = mid + 1\n        else: hi = mid - 1\nelse:\n    print('loop ended at lo == hi ==', lo, 'and nums[lo] =', nums[lo], 'was never examined')\n    print('your answer: -1 | expected: 4 — the target sat in that final unexamined cell')",
+        "follow_up": "Keep the range inclusive down to the last candidate. Then the rotation logic decides which half lives."
+      }
+    },
+    "round-4": {
+      "2": {
+        "question": "You used the plain sorted rule. 7 > 0 says go left — but where did the rotation actually put the 0?",
+        "trace_setup": "nums, target = [4, 5, 6, 7, 0, 1, 2], 0\nlo, hi = 0, len(nums) - 1\nwhile lo <= hi:\n    mid = (lo + hi) // 2\n    print('probe nums[%d] = %d' % (mid, nums[mid]))\n    if nums[mid] == target:\n        print('found at', mid); break\n    if nums[mid] < target: lo = mid + 1\n    else: hi = mid - 1\nelse:\n    print('your answer: -1 | expected: 4')\n    print('7 > 0 steered the search left, but rotation had moved 0 to the RIGHT of 7')",
+        "follow_up": "First ask which half is sorted — only that half answers range questions honestly. The fall-through is then easy."
+      }
+    }
+  },
+  "puzzle-008": {
+    "round-2": {
+      "1": {
+        "question": "With hi = mid in the loop body, lo <= hi can reach lo == hi == mid. What would ever make it exit?",
+        "trace_setup": "nums = [4, 5, 6, 7, 0, 1, 2]\nlo, hi, steps = 0, len(nums) - 1, 0\nwhile lo <= hi and steps < 10:\n    steps += 1\n    mid = (lo + hi) // 2\n    print('step', steps, ': lo =', lo, ' hi =', hi, ' mid =', mid)\n    if nums[mid] > nums[hi]: lo = mid + 1\n    else: hi = mid\nprint('lo and hi froze at', (lo, hi), '— with hi = mid, lo <= hi can never turn false')",
+        "follow_up": "Strict lo < hi pairs with keeping mid as a candidate. The midpoint computation itself comes next."
+      }
+    },
+    "round-4": {
+      "1": {
+        "question": "You compare nums[mid] against nums[lo]. After narrowing to [0, 1, 2], 1 > 0 sends the search right — away from what?",
+        "trace_setup": "nums = [4, 5, 6, 7, 0, 1, 2]\nlo, hi = 0, len(nums) - 1\nwhile lo < hi:\n    mid = (lo + hi) // 2\n    print('lo', lo, 'hi', hi, 'mid', mid, ': nums[mid] =', nums[mid], 'vs nums[lo] =', nums[lo])\n    if nums[mid] > nums[lo]: lo = mid + 1\n    else: hi = mid\nprint('your answer:', nums[lo], '| expected: 0')\nprint('measuring against nums[lo] reads a sorted stretch as the dip and walks right past the minimum')",
+        "follow_up": "The right end is the honest reference: above it means the dip lies rightward. Then return what lo lands on."
+      }
+    }
+  },
+  "puzzle-009": {
+    "round-2": {
+      "1": {
+        "question": "You roll the recurrence n - 1 times. Each roll advances one stair — which stair does the count stop at?",
+        "trace_setup": "n = 4\na, b = 1, 1\nfor k in range(n - 1):\n    a, b = b, a + b\n    print('after roll', k + 1, ': a =', a, ' (ways to stair', k + 1, ')')\nprint('your answer:', a, '| expected: 5 — the count stopped one stair short, at ways(3)')",
+        "follow_up": "One roll per stair — no more, no less. Then the recurrence itself is just two numbers and a plus."
+      }
+    },
+    "round-3": {
+      "3": {
+        "question": "nxt = 2 * b assumes every path forks in two at each stair. What does that count that a real climb can't do?",
+        "trace_setup": "n = 4\na, b = 1, 1\nfor _ in range(n):\n    nxt = 2 * b\n    a, b = b, nxt\nprint('your answer:', a, '| expected: 5')\nprint('doubling counts phantom climbs — paths near the top fork once or not at all, never always twice')",
+        "follow_up": "Arrivals come from exactly two earlier stairs — add those two counts. Rolling the pair forward is then mechanical."
+      }
+    },
+    "round-5": {
+      "1": {
+        "question": "You return b. After the final roll, b has already absorbed one extra step — which stair's count is it holding?",
+        "trace_setup": "n = 4\na, b = 1, 1\nfor _ in range(n):\n    a, b = b, a + b\nprint('a =', a, ' (ways to reach stair', n, ')')\nprint('b =', b, ' (ways to reach stair', n + 1, '— one stair beyond the top)')\nprint('your answer:', b, '| expected: 5')",
+        "follow_up": "a trails exactly one roll behind b, and that lag is the answer. Watch the test runs confirm it."
+      }
+    }
+  },
+  "puzzle-010": {
+    "round-1": {
+      "2": {
+        "question": "The dp array works — every earlier element gets compared to every later one. How many comparisons at 100,000 elements?",
+        "trace_setup": "nums = [10, 9, 2, 5, 3, 7, 101, 18]\ndp = [1] * len(nums)\ncomparisons = 0\nfor i in range(len(nums)):\n    for j in range(i):\n        comparisons += 1\n        if nums[j] < nums[i]:\n            dp[i] = max(dp[i], dp[j] + 1)\nprint('answer:', max(dp), '(correct!) using', comparisons, 'comparisons on 8 elements')\nn = 100000\nprint('at n = 100k that becomes ~', n * n // 2, 'comparisons; tails + binary search needs ~', n * 17)",
+        "follow_up": "Correct, just costly. The tails idea answers the same question with one sorted list — watch what each step asks of it."
+      }
+    },
+    "round-3": {
+      "3": {
+        "question": "bisect_right lands past tails equal to x. For a STRICTLY increasing run, may an equal value extend one?",
+        "trace_setup": "import bisect\ndef lis(nums, side):\n    tails = []\n    for x in nums:\n        i = side(tails, x)\n        if i == len(tails): tails.append(x)\n        else: tails[i] = x\n    return len(tails)\nfirst = [10, 9, 2, 5, 3, 7, 101, 18]\nprint('on', first, ': bisect_right gives', lis(first, bisect.bisect_right), '(no duplicates, so the slip hides)')\nprint('on [7, 7, 7, 7]: bisect_right gives', lis([7, 7, 7, 7], bisect.bisect_right), 'but the strict answer is 1')\nprint('landing AFTER an equal tail treats 7 -> 7 as an increase')",
+        "follow_up": "Strictness means an equal value must REPLACE a tail, not extend the run. Next: what to do at that landing spot."
+      }
+    },
+    "round-4": {
+      "1": {
+        "question": "You append every x. On the falling stretch 10, 9, 2 — should the tails list really grow three times?",
+        "trace_setup": "nums = [10, 9, 2, 5, 3, 7, 101, 18]\ntails = []\nfor x in nums:\n    tails.append(x)\nprint('your tails:', tails)\nprint('your answer:', len(tails), '| expected: 4')\nprint('appending without the placement test counts every element, increasing or not')",
+        "follow_up": "Append only when x extends the longest run; otherwise improve an existing tail. The length then speaks for itself."
+      }
+    }
+  }
+}
