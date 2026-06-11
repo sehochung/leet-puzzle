@@ -12,9 +12,10 @@ import TestResults from "./TestResults";
 
 type Answer = { chosen: 0 | 1 | 2 | 3; correct: boolean };
 
-// The blind-build flow: pick all 5 with NO correctness reveal ("building"), land on a neutral
-// full-solution view with a Run button ("ready"), then reveal everything ("results"). "running"
-// is the Pyodide load/execute interlude (wired in a later phase).
+// The corrective flow: each pick locks on first click and reveals correctness immediately;
+// the editor fills in the CANONICAL fragment for every locked round (wrong picks get
+// corrected), so the algorithm always builds right. After round 5: "ready" (full solution +
+// Run button), "running" (Pyodide), then "results".
 type Phase = "building" | "ready" | "running" | "results";
 
 const EMPTY: Array<Answer | null> = [null, null, null, null, null];
@@ -60,23 +61,26 @@ export default function Player({ puzzle }: { puzzle: Puzzle }) {
   const isLast = roundIdx === puzzle.rounds.length - 1;
   const current = answers[roundIdx] ?? null;
   const correctCount = answers.filter((a) => a?.correct).length;
-  // The player's OWN pick per round (null until answered) — drives the panels.
+  // The player's OWN pick per round (null until answered) — drives the end-screen review.
   const picks = answers.map((a) => (a ? a.chosen : null));
-  // Canonical-only fallback: how many stages the (non-diff) panel reveals.
-  const selectedCount = answers.filter((a) => a !== null).length;
+  // Rounds lock strictly in order, so the locked count is a prefix length — it drives how
+  // much of the editor is filled (with canonical code).
+  const lockedCount = answers.filter((a) => a !== null).length;
 
-  // Pick (or re-pick — changeable until "Next") with NO reveal: correctness is recorded for the
-  // end screen but never shown during the build.
+  // First click locks the round (score is first-pick correctness) and reveals immediately;
+  // the editor fills the canonical fragment either way (corrective build). The guard lives
+  // inside the updater so a fast double-click can't overwrite the locked answer.
   function choose(i: 0 | 1 | 2 | 3) {
     if (phase !== "building") return;
     setAnswers((prev) => {
+      if (prev[roundIdx]) return prev;
       const next = [...prev];
       next[roundIdx] = { chosen: i, correct: i === correctIndex };
       return next;
     });
   }
 
-  // Commit the current pick and advance; after the last round we land on "ready" (Run screen).
+  // Advance past the locked round; after the last round we land on "ready" (Run screen).
   function next() {
     if (phase !== "building") return;
     if (isLast) setPhase("ready");
@@ -101,23 +105,30 @@ export default function Player({ puzzle }: { puzzle: Puzzle }) {
     setPhase("building"); // language intentionally kept; Pyodide stays loaded for the next run
   }
 
+  // Locked rounds show first-pick correctness immediately; the current round is highlighted;
+  // upcoming rounds are muted. Squares are visual progress only — never clickable.
   function squareClass(idx: number): string {
-    if (phase === "results") {
-      return answers[idx]?.correct ? "bg-green-600 text-white" : "bg-red-600 text-white";
-    }
+    const a = answers[idx];
+    if (a) return a.correct ? "bg-green-600 text-white" : "bg-red-600 text-white";
     if (idx === roundIdx && phase === "building") {
       return "bg-blue-100 text-blue-900 ring-2 ring-blue-500";
     }
-    if (answers[idx] !== null) return "bg-blue-600 text-white"; // selected, correctness hidden
     return "bg-gray-200 text-gray-500";
   }
 
-  // Building only: neutral until picked, blue outline once selected — never green/red.
+  // Until the round locks: neutral with hover. After: canonical green, the player's wrong
+  // pick red, the rest dimmed — the per-round reveal.
   function optionClass(i: number): string {
-    if (current?.chosen === i) {
-      return "border-2 border-blue-500 bg-blue-50 text-blue-900 dark:bg-blue-500/15 dark:text-white";
+    if (!current) {
+      return "cursor-pointer border border-black/15 hover:bg-black/5 dark:border-white/20 dark:hover:bg-white/5";
     }
-    return "border border-black/15 hover:bg-black/5 dark:border-white/20 dark:hover:bg-white/5";
+    if (i === correctIndex) {
+      return "border-2 border-green-600 bg-green-50 text-green-900 dark:bg-green-500/15 dark:text-white";
+    }
+    if (current.chosen === i) {
+      return "border-2 border-red-600 bg-red-50 text-red-900 dark:bg-red-500/15 dark:text-white";
+    }
+    return "border border-black/15 opacity-40 dark:border-white/20";
   }
 
   const isBuilding = phase === "building";
@@ -161,8 +172,8 @@ export default function Player({ puzzle }: { puzzle: Puzzle }) {
         </div>
       </section>
 
-      {/* [B2] Construction panel — the player's picks build here in NEUTRAL during the blind build
-          (no green/red): they reason about coherence before the reveal. Canonical-only is the
+      {/* [B2] Construction panel — the code editor: every locked round holds the CANONICAL
+          fragment (corrective build), unlocked rounds a placeholder. Canonical-only is the
           preserved session-004 fallback. */}
       {showBuildPanel && (
         <section className="mt-6">
@@ -170,24 +181,18 @@ export default function Player({ puzzle }: { puzzle: Puzzle }) {
             <LangToggle language={language} setLanguage={setLanguage} />
           </div>
           {puzzle.constructionMode === "diff" ? (
-            <DiffPanel
-              puzzle={puzzle}
-              picks={picks}
-              revealedThrough={puzzle.rounds.length}
-              language={language}
-              neutral
-            />
+            <DiffPanel puzzle={puzzle} filledThroughRound={lockedCount} language={language} />
           ) : (
             <ConstructedCode
               puzzle={puzzle}
-              completedThroughRound={selectedCount}
+              completedThroughRound={lockedCount}
               language={language}
             />
           )}
         </section>
       )}
 
-      {/* [C] Active round — pick (or re-pick) with no feedback */}
+      {/* [C] Active round — one pick, then it locks and reveals */}
       {isBuilding && (
         <section className="mt-6">
           <p className="text-xs font-semibold uppercase tracking-wide opacity-50">
@@ -199,8 +204,9 @@ export default function Player({ puzzle }: { puzzle: Puzzle }) {
               <button
                 key={i}
                 type="button"
+                disabled={current !== null}
                 onClick={() => choose(i as 0 | 1 | 2 | 3)}
-                className={`w-full cursor-pointer rounded-lg px-4 py-3 text-left text-sm transition-colors ${optionClass(i)}`}
+                className={`w-full rounded-lg px-4 py-3 text-left text-sm transition-colors ${optionClass(i)}`}
               >
                 {opt.conceptLabel}
               </button>

@@ -4,14 +4,14 @@
 // end-screen ReviewDiff. Pure presentational: gutter (line number + +/- symbol) and a
 // monospace code cell. `min-w-full w-max` lets the tinted background span the full scroll
 // width inside an overflow-x-auto parent, so long lines scroll without clipping the tint.
-//   add        -> green "+"  (correct pick / canonical)
-//   remove     -> red   "-"  (wrong pick)
-//   neutral    -> committed pick during the blind build: numbered, no +/- , no tint (a diff
-//                 "context" line) — correctness is hidden until the end-screen reveal
+//   add        -> green "+"  (canonical, end-screen review)
+//   remove     -> red   "-"  (wrong pick, end-screen review)
+//   code       -> a filled editor line during the corrective build: numbered, no +/- ,
+//                 no tint (correctness feedback lives in the options/squares, not here)
 //   comment    -> muted stage label, blank gutter
 //   placeholder-> muted "___" slot not yet filled, blank gutter
 
-export type DiffTone = "add" | "remove" | "neutral" | "comment" | "placeholder";
+export type DiffTone = "add" | "remove" | "code" | "comment" | "placeholder";
 
 export default function DiffLine({
   lineNo,
