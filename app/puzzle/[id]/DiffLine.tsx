@@ -18,14 +18,12 @@ export default function DiffLine({
   sym,
   text,
   tone,
-  accentColor,
   onClick,
 }: {
   lineNo?: number;
   sym?: "+" | "-";
   text: string;
   tone: DiffTone;
-  accentColor?: string; // round-color left rail (wayfinding); transparent when absent
   onClick?: () => void; // when set the row is a button (end-screen rationale toggle)
 }) {
   const bg =
@@ -42,9 +40,7 @@ export default function DiffLine({
         : "";
   const textColor = tone === "comment" || tone === "placeholder" ? "opacity-45" : "";
 
-  // Every row carries the rail (transparent when unset) so gutters stay aligned.
-  const cls = `flex w-max min-w-full border-l-2 font-mono text-[13px] leading-[1.6] ${bg}`;
-  const style = { borderLeftColor: accentColor ?? "transparent" };
+  const cls = `flex w-max min-w-full font-mono text-[13px] leading-[1.6] ${bg}`;
   const body = (
     <>
       <span className="w-10 shrink-0 select-none pr-2 pl-3 text-right tabular-nums opacity-40">
@@ -60,16 +56,11 @@ export default function DiffLine({
       <button
         type="button"
         onClick={onClick}
-        style={style}
         className={`${cls} cursor-pointer text-left transition hover:brightness-95 dark:hover:brightness-125`}
       >
         {body}
       </button>
     );
   }
-  return (
-    <div style={style} className={cls}>
-      {body}
-    </div>
-  );
+  return <div className={cls}>{body}</div>;
 }
