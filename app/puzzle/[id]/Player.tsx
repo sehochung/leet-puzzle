@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import type { Language, Puzzle } from "@/lib/puzzle";
 import { buildConstructedCode } from "@/lib/build-code";
+import { roundColor, roundColorAlpha } from "@/lib/round-colors";
 import { runSolution, parseEntryPoint, type TestRunResult } from "@/lib/run-python";
 import ConstructedCode from "./ConstructedCode";
 import DiffPanel from "./DiffPanel";
@@ -105,15 +106,35 @@ export default function Player({ puzzle }: { puzzle: Puzzle }) {
     setPhase("building"); // language intentionally kept; Pyodide stays loaded for the next run
   }
 
-  // Locked rounds show first-pick correctness immediately; the current round is highlighted;
-  // upcoming rounds are muted. Squares are visual progress only — never clickable.
-  function squareClass(idx: number): string {
+  // Round chips carry their persistent wayfinding color (border + tint); first-pick
+  // correctness shows as a ✓/✗ glyph once locked. Three states — locked / current /
+  // upcoming — and never clickable (visual progress only).
+  function chip(idx: number) {
     const a = answers[idx];
-    if (a) return a.correct ? "bg-green-600 text-white" : "bg-red-600 text-white";
-    if (idx === roundIdx && phase === "building") {
-      return "bg-blue-100 text-blue-900 ring-2 ring-blue-500";
-    }
-    return "bg-gray-200 text-gray-500";
+    const isCurrent = idx === roundIdx && phase === "building" && !a;
+    return (
+      <div
+        key={idx}
+        style={{
+          borderColor: a || isCurrent ? roundColor(idx) : roundColorAlpha(idx, 0.35),
+          backgroundColor: a
+            ? roundColorAlpha(idx, 0.18)
+            : isCurrent
+              ? roundColorAlpha(idx, 0.1)
+              : undefined,
+        }}
+        className={`flex h-10 items-center justify-center gap-1.5 rounded-md border-2 text-sm font-semibold transition-colors ${
+          a || isCurrent ? "" : "text-gray-500"
+        }`}
+      >
+        {idx + 1}
+        {a && (
+          <span className={a.correct ? "text-green-600" : "text-red-600"} aria-hidden>
+            {a.correct ? "✓" : "✗"}
+          </span>
+        )}
+      </div>
+    );
   }
 
   // Until the round locks: neutral with hover. After: canonical green, the player's wrong
@@ -140,17 +161,8 @@ export default function Player({ puzzle }: { puzzle: Puzzle }) {
         ← All puzzles
       </Link>
 
-      {/* [A] Progress strip */}
-      <div className="mt-4 grid grid-cols-5 gap-2">
-        {puzzle.rounds.map((r, idx) => (
-          <div
-            key={r.id}
-            className={`flex h-10 items-center justify-center rounded-md text-sm font-semibold transition-colors ${squareClass(idx)}`}
-          >
-            {idx + 1}
-          </div>
-        ))}
-      </div>
+      {/* [A] Progress strip — persistent round colors (wayfinding), ✓/✗ once locked */}
+      <div className="mt-4 grid grid-cols-5 gap-2">{puzzle.rounds.map((_, idx) => chip(idx))}</div>
 
       {/* [B] Base problem card */}
       <section className="mt-6 rounded-lg border border-black/10 p-5 dark:border-white/15">
@@ -195,8 +207,16 @@ export default function Player({ puzzle }: { puzzle: Puzzle }) {
       {/* [C] Active round — one pick, then it locks and reveals */}
       {isBuilding && (
         <section className="mt-6">
-          <p className="text-xs font-semibold uppercase tracking-wide opacity-50">
-            Round {roundIdx + 1} of 5 · {round.stage}
+          {/* Round-color dot is the only colored element — never the question text */}
+          <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide">
+            <span
+              aria-hidden
+              className="inline-block h-2 w-2 shrink-0 rounded-full"
+              style={{ backgroundColor: roundColor(roundIdx) }}
+            />
+            <span className="opacity-50">
+              Round {roundIdx + 1} of 5 · {round.stage}
+            </span>
           </p>
           <h2 className="mt-1 text-lg font-semibold">{round.question}</h2>
           <div className="mt-4 flex flex-col gap-3">

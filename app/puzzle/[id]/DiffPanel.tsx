@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import type { Language, Puzzle } from "@/lib/puzzle";
 import { COMMENT, scaffoldStageLines } from "@/lib/build-code";
+import { roundColor, roundColorAlpha } from "@/lib/round-colors";
 import DiffLine from "./DiffLine";
 
 // The code editor during the corrective build. Rounds lock strictly in order, so
@@ -25,13 +26,23 @@ export default function DiffPanel({
 
   puzzle.rounds.forEach((round, r) => {
     const { stage } = round;
+    // Round-color rail on every row the round owns: faded while the slot is
+    // pending, full strength once its code is filled in.
+    const pendingAccent = roundColorAlpha(r, 0.35);
     rows.push(
-      <DiffLine key={`c${r}`} tone="comment" text={`${COMMENT[language]} ${stage}`} />,
+      <DiffLine
+        key={`c${r}`}
+        tone="comment"
+        text={`${COMMENT[language]} ${stage}`}
+        accentColor={r >= filledThroughRound ? pendingAccent : roundColor(r)}
+      />,
     );
 
     if (r >= filledThroughRound) {
       scaffoldStageLines(puzzle, stage, "___", language).forEach((line, k) =>
-        rows.push(<DiffLine key={`p${r}-${k}`} tone="placeholder" text={line} />),
+        rows.push(
+          <DiffLine key={`p${r}-${k}`} tone="placeholder" text={line} accentColor={pendingAccent} />,
+        ),
       );
       return;
     }
@@ -39,7 +50,9 @@ export default function DiffPanel({
     const canonical = round.options[round.correctIndex].fragments[language];
     scaffoldStageLines(puzzle, stage, canonical, language).forEach((line, k) => {
       lineNo += 1;
-      rows.push(<DiffLine key={`f${r}-${k}`} tone="code" lineNo={lineNo} text={line} />);
+      rows.push(
+        <DiffLine key={`f${r}-${k}`} tone="code" lineNo={lineNo} text={line} accentColor={roundColor(r)} />,
+      );
     });
   });
 
