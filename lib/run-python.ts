@@ -4,7 +4,6 @@
 //
 // Comparison mirrors scripts/test-puzzles.mjs exactly: order-insensitive at every level
 // (deep-sort lists, sort dict keys, string-compare) so "any order" outputs match — see norm().
-import type { TestCase } from "./puzzle";
 
 // Pinned: latest stable as of 2026-05. `pyodide.js` + the WASM live under this base.
 const PYODIDE_VERSION = "v0.29.4";
@@ -29,24 +28,6 @@ interface PyodideInterface {
 type LoadPyodide = (options: { indexURL: string }) => Promise<PyodideInterface>;
 // `loadPyodide` is attached to window by the injected CDN script; this typed view avoids `any`.
 type PyodideWindow = Window & typeof globalThis & { loadPyodide?: LoadPyodide };
-
-// Defines __run_all(tests_json, entry): calls the entry fn on each test's input, capturing either
-// the (JSON-serializable) return value or the traceback — never throwing — and returns JSON.
-const HARNESS = `
-import json, traceback
-def __run_all(__tests_json, __entry):
-    __fn = globals()[__entry]
-    __tests = json.loads(__tests_json)
-    __out = []
-    for __t in __tests:
-        try:
-            __got = __fn(__t["input"])
-            json.dumps(__got)  # force serialization failures into this test's error, not the batch
-            __out.append({"actual": __got, "error": None})
-        except Exception:
-            __out.append({"actual": None, "error": traceback.format_exc()})
-    return json.dumps(__out)
-`;
 
 function injectScript(src: string): Promise<void> {
   return new Promise((resolve, reject) => {
@@ -94,7 +75,7 @@ function norm(x: unknown): unknown {
   }
   return x;
 }
-function equalUnordered(a: unknown, b: unknown): boolean {
+export function equalUnordered(a: unknown, b: unknown): boolean {
   return JSON.stringify(norm(a)) === JSON.stringify(norm(b));
 }
 
@@ -310,35 +291,6 @@ export async function runTraced(
   }
 }
 
-// Runs the constructed solution against every test. Always resolves: a syntax error in the
-// composed code, a Pyodide load failure, or a per-test exception all surface as error results,
-// never a thrown exception that would crash the UI.
-export async function runSolution(
-  constructedCode: string,
-  entryPoint: string,
-  tests: readonly TestCase[],
-): Promise<TestRunResult[]> {
-  try {
-    const pyodide = await getPyodide();
-    await pyodide.runPythonAsync(`${constructedCode}\n\n${HARNESS}`);
-    const runAll = pyodide.globals.get("__run_all");
-    if (typeof runAll !== "function") throw new Error("run harness was not defined");
-    const raw = (runAll as (t: string, e: string) => unknown)(JSON.stringify(tests), entryPoint);
-    const parsed = JSON.parse(String(raw)) as Array<{ actual: unknown; error: string | null }>;
-    return tests.map((t, i) => {
-      const r = parsed[i] ?? { actual: null, error: "no result returned" };
-      const passed = r.error === null && equalUnordered(r.actual, t.expected);
-      return { index: i, input: t.input, expected: t.expected, actual: r.actual, passed, error: r.error };
-    });
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
-    return tests.map((t, i) => ({
-      index: i,
-      input: t.input,
-      expected: t.expected,
-      actual: null,
-      passed: false,
-      error: msg,
-    }));
-  }
-}
+// NOTE: the session-006 batch runner (runSolution + its __run_all harness) was removed in
+// session 007 phase 5 — the final run now executes tests ONE AT A TIME via runTraced so each
+// test animates through the debugger panel; comparison still uses equalUnordered.

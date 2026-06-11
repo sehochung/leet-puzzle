@@ -7,9 +7,9 @@ import type { Language, Puzzle } from "@/lib/puzzle";
 import { buildConstructedCode } from "@/lib/build-code";
 import { buildPartialRunnableCode } from "@/lib/partial-code";
 import {
+  equalUnordered,
   preloadPyodide,
   runSnippet,
-  runSolution,
   runTraced,
   parseEntryPoint,
   type TestRunResult,
@@ -25,11 +25,15 @@ type Answer = { chosen: 0 | 1 | 2 | 3; correct: boolean };
 
 // The corrective flow: each pick locks on first click and reveals correctness immediately;
 // the editor fills in the CANONICAL fragment for every locked round (wrong picks get
-// corrected), so the algorithm always builds right. After round 5: "ready" (full solution +
-// Run button), "running" (Pyodide), then "results".
+// corrected via the bridge), so the final program is always correct. After round 5:
+// "ready" (full solution + Run button), "running" (tests animate one at a time through
+// the debugger panel), then "results" (the score appears only after every test has run —
+// it reflects first-pick intuition, not the always-correct final code).
 type Phase = "building" | "ready" | "running" | "results";
 
 const EMPTY: Array<Answer | null> = [null, null, null, null, null];
+
+const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
 // On desktop the page widens so the editor + debugger sit side by side; everything
 // else stays reading-width and centered.
@@ -165,14 +169,45 @@ export default function Player({ puzzle, bridges }: { puzzle: Puzzle; bridges: B
     next();
   }
 
-  // Run the constructed Python in Pyodide against the tests, then reveal everything. runSolution
-  // never throws (load/syntax/per-test failures come back as error results), so no try/catch.
+  // Run the tests ONE AT A TIME: each test's trace animates through the debugger panel,
+  // its PASS/FAIL lands ~200ms after the output (so the output gets read first), and the
+  // next test starts ~500ms later. The score appears only after all tests have run.
+  // traceRunId doubles as the abort signal — reset() bumps it and the loop bows out.
   async function run() {
     setPhase("running");
-    const code = buildConstructedCode(puzzle, 5, "python");
+    setResults([]);
+    const runId = ++traceRunId.current;
+    const { code, stubReturnLine } = buildPartialRunnableCode(puzzle, puzzle.rounds.length);
     const entry = parseEntryPoint(puzzle.canonicalSolutions.python);
-    const r = await runSolution(code, entry, puzzle.tests);
-    setResults(r);
+    const acc: TestRunResult[] = [];
+    for (let i = 0; i < puzzle.tests.length; i++) {
+      const test = puzzle.tests[i];
+      if (!test) break;
+      setPanel({ kind: "loading" }); // clears the previous test's STATE/TRACE
+      const trace = await runTraced(code, entry, test.input, stubReturnLine);
+      if (traceRunId.current !== runId) return;
+      setPanel({ kind: "trace", trace });
+      await sleep(200);
+      if (traceRunId.current !== runId) return;
+      const actual = trace.returnJson !== null ? (JSON.parse(trace.returnJson) as unknown) : null;
+      acc.push({
+        index: i,
+        input: test.input,
+        expected: test.expected,
+        actual,
+        passed:
+          trace.stopped === "completed" &&
+          trace.error === null &&
+          trace.returnJson !== null &&
+          equalUnordered(actual, test.expected),
+        error: trace.error,
+      });
+      setResults([...acc]);
+      if (i < puzzle.tests.length - 1) {
+        await sleep(500);
+        if (traceRunId.current !== runId) return;
+      }
+    }
     setPhase("results");
   }
 
@@ -213,7 +248,9 @@ export default function Player({ puzzle, bridges }: { puzzle: Puzzle; bridges: B
   }
 
   const isBuilding = phase === "building";
-  const showBuildPanel = phase === "building" || phase === "ready" || phase === "running";
+  // Editor + debugger stay visible through every phase: the tests animate through the
+  // panel during "running", and the last trace remains on screen behind the score.
+  const showBuildPanel = true;
 
   return (
     <main className="mx-auto w-full max-w-2xl px-4 py-8 lg:max-w-5xl">
@@ -332,30 +369,42 @@ export default function Player({ puzzle, bridges }: { puzzle: Puzzle; bridges: B
         </div>
       )}
 
-      {/* [E] Ready/running — full solution above; run it (Python) or switch to Python (Java) */}
-      {(phase === "ready" || phase === "running") && (
+      {/* [E] Ready — the complete solution sits above; run it (Python) or switch (Java) */}
+      {phase === "ready" && (
         <section className={`mt-6 ${NARROW}`}>
           {language === "python" ? (
             <button
               type="button"
               onClick={run}
-              disabled={phase === "running"}
-              className="w-full rounded-lg bg-blue-600 px-4 py-3 font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-default disabled:opacity-70"
+              className="w-full cursor-pointer rounded-lg bg-blue-600 px-4 py-3 font-semibold text-white transition-colors hover:bg-blue-700"
             >
-              {phase === "running" ? "Loading Python runtime…" : "Run solution →"}
+              Run solution →
             </button>
           ) : (
             <p className="rounded-lg border border-black/10 bg-black/[0.03] p-4 text-sm leading-relaxed opacity-80 dark:border-white/15 dark:bg-white/5">
-              Running is Python-only. Switch the language toggle to Python to run your solution —
-              the review below works in either language.
+              Running is Python-only. Switch the language toggle to Python to watch your solution
+              run — the review below works in either language.
             </p>
           )}
           {/* Java has no run step, so the full reveal lives right here under the note. */}
-          {language === "java" && phase === "ready" && Results()}
+          {language === "java" && Results()}
         </section>
       )}
 
-      {/* [F] Results — score + the reveal (green/red diff + rationale) */}
+      {/* [E2] Sequential test run — results accumulate as each test animates through the
+          debugger panel; this list stays put once the score appears below it. */}
+      {(phase === "running" || phase === "results") && language === "python" && results && (
+        <section className={`mt-6 ${NARROW}`}>
+          {phase === "running" && (
+            <p className="mb-3 text-sm font-semibold opacity-70">
+              Running test {Math.min(results.length + 1, puzzle.tests.length)} of {puzzle.tests.length}…
+            </p>
+          )}
+          <TestResults results={results} />
+        </section>
+      )}
+
+      {/* [F] Results — the score appears only AFTER every test has run */}
       {phase === "results" && Results()}
     </main>
   );
@@ -371,6 +420,7 @@ export default function Player({ puzzle, bridges }: { puzzle: Puzzle; bridges: B
         <div className="text-center">
           <p className="text-sm uppercase tracking-wide opacity-50">Your score</p>
           <p className="mt-1 text-5xl font-bold tabular-nums">{correctCount}/5</p>
+          <p className="mt-1 text-xs uppercase tracking-wide opacity-50">rounds on first pick</p>
           <div className="mt-4 flex justify-center gap-2">
             {answers.map((a, idx) => (
               <div
@@ -383,18 +433,22 @@ export default function Player({ puzzle, bridges }: { puzzle: Puzzle; bridges: B
               </div>
             ))}
           </div>
+          {/* The tests always pass: bridging corrected the code. The score above is the
+              intuition measure; this line just confirms the algorithm works. */}
+          {language === "python" && results && (
+            <p className="mt-3 text-sm font-semibold">
+              <span className={results.every((r) => r.passed) ? "text-green-600" : "text-red-600"}>
+                {results.filter((r) => r.passed).length}/{results.length}
+              </span>{" "}
+              tests passing
+            </p>
+          )}
         </div>
 
-        {/* Test results — the payoff the build was aimed at; Python-only (Pyodide). */}
-        {language === "python" ? (
-          results && (
-            <div className="mt-6">
-              <TestResults results={results} />
-            </div>
-          )
-        ) : (
+        {language === "java" && (
           <p className="mt-6 rounded-lg border border-black/10 bg-black/[0.03] p-4 text-sm leading-relaxed opacity-80 dark:border-white/15 dark:bg-white/5">
-            Switch to Python to run your solution against the test cases — execution is Python-only.
+            Switch to Python to watch the solution run against the test cases — execution is
+            Python-only.
           </p>
         )}
 
