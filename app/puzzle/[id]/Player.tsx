@@ -2,16 +2,19 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import type { BridgeMap } from "@/lib/bridges";
 import type { Language, Puzzle } from "@/lib/puzzle";
 import { buildConstructedCode } from "@/lib/build-code";
 import { buildPartialRunnableCode } from "@/lib/partial-code";
 import {
   preloadPyodide,
+  runSnippet,
   runSolution,
   runTraced,
   parseEntryPoint,
   type TestRunResult,
 } from "@/lib/run-python";
+import BridgeCard from "./BridgeCard";
 import ConstructedCode from "./ConstructedCode";
 import DebuggerPanel, { type PanelView } from "./DebuggerPanel";
 import DiffPanel from "./DiffPanel";
@@ -57,7 +60,7 @@ function LangToggle({
   );
 }
 
-export default function Player({ puzzle }: { puzzle: Puzzle }) {
+export default function Player({ puzzle, bridges }: { puzzle: Puzzle; bridges: BridgeMap }) {
   const [roundIdx, setRoundIdx] = useState(0);
   const [answers, setAnswers] = useState<Array<Answer | null>>(EMPTY);
   const [phase, setPhase] = useState<Phase>("building");
@@ -65,12 +68,17 @@ export default function Player({ puzzle }: { puzzle: Puzzle }) {
   const [results, setResults] = useState<TestRunResult[] | null>(null);
   const [panel, setPanel] = useState<PanelView>({ kind: "idle" });
   const [runtimeReady, setRuntimeReady] = useState(false);
+  // A wrong pick opens a bridge; the round is locked but its slot stays unfilled (and
+  // the partial run held back) until the bridge's Continue — per the mechanic, the
+  // correct code "arrives" as the resolution of the bridge, not alongside the mistake.
+  const [bridging, setBridging] = useState(false);
   // Monotonic id so a stale trace can never overwrite a newer panel state.
   const traceRunId = useRef(0);
 
-  // Rounds lock strictly in order, so the locked count is a prefix length — it drives how
-  // much of the editor is filled (with canonical code) and how far the partial run goes.
+  // Rounds lock strictly in order, so the locked count is a prefix length. The editor
+  // and the partial run follow effectiveFilled, which lags one slot during a bridge.
   const lockedCount = answers.filter((a) => a !== null).length;
+  const effectiveFilled = lockedCount - (bridging ? 1 : 0);
 
   // Warm Pyodide as soon as the puzzle opens (lazy per site, eager per puzzle). A failed
   // preload is ignored: the first real run retries and surfaces the error in the panel.
@@ -87,22 +95,24 @@ export default function Player({ puzzle }: { puzzle: Puzzle }) {
     };
   }, []);
 
-  // After each lock (and on a Java→Python switch), run the partial program — canonical
-  // fragments for locked rounds, stubs for the rest — against the first test case and
-  // show STATE/TRACE/OUTPUT. `phase` is read but deliberately not a dependency: the
-  // building→ready transition happens at an unchanged lockedCount and needs no rerun.
+  // After each resolved round (and on a Java→Python switch), run the partial program —
+  // canonical fragments for filled rounds, stubs for the rest — against the first test
+  // case and show STATE/TRACE/OUTPUT. Follows effectiveFilled, so during a bridge the
+  // panel stays on the bridge's "Show me" output rather than jumping ahead. `phase` is
+  // read but deliberately not a dependency: the building→ready transition happens at an
+  // unchanged fill count and needs no rerun.
   useEffect(() => {
-    if (language !== "python" || lockedCount === 0) return;
+    if (language !== "python" || effectiveFilled === 0) return;
     if (phase === "running" || phase === "results") return;
     const id = ++traceRunId.current;
     setPanel({ kind: "loading" });
-    const { code, stubReturnLine } = buildPartialRunnableCode(puzzle, lockedCount);
+    const { code, stubReturnLine } = buildPartialRunnableCode(puzzle, effectiveFilled);
     const entry = parseEntryPoint(puzzle.canonicalSolutions.python);
     void runTraced(code, entry, puzzle.tests[0]?.input, stubReturnLine).then((trace) => {
       if (traceRunId.current === id) setPanel({ kind: "trace", trace });
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lockedCount, language, puzzle]);
+  }, [effectiveFilled, language, puzzle]);
 
   // roundIdx is always within [0,4]; the guard satisfies the tuple's `| undefined`
   // under noUncheckedIndexedAccess.
@@ -116,17 +126,18 @@ export default function Player({ puzzle }: { puzzle: Puzzle }) {
   // The player's OWN pick per round (null until answered) — drives the end-screen review.
   const picks = answers.map((a) => (a ? a.chosen : null));
 
-  // First click locks the round (score is first-pick correctness) and reveals immediately;
-  // the editor fills the canonical fragment either way (corrective build). The guard lives
-  // inside the updater so a fast double-click can't overwrite the locked answer.
+  // First click locks the round (score is first-pick correctness) and reveals immediately.
+  // A correct pick fills the editor at once; a wrong pick opens the bridge first. The
+  // updater guard makes a fast double-click harmless.
   function choose(i: 0 | 1 | 2 | 3) {
-    if (phase !== "building") return;
+    if (phase !== "building" || current) return;
     setAnswers((prev) => {
       if (prev[roundIdx]) return prev;
       const next = [...prev];
       next[roundIdx] = { chosen: i, correct: i === correctIndex };
       return next;
     });
+    if (i !== correctIndex) setBridging(true);
   }
 
   // Advance past the locked round; after the last round we land on "ready" (Run screen).
@@ -134,6 +145,24 @@ export default function Player({ puzzle }: { puzzle: Puzzle }) {
     if (phase !== "building") return;
     if (isLast) setPhase("ready");
     else setRoundIdx((i) => i + 1);
+  }
+
+  // Bridge "Show me": run the bridge's self-contained snippet (NOT the constructed
+  // program) and show its printed output in the debugger panel.
+  async function showBridgeTrace() {
+    const bridge = current ? bridges[`${roundIdx}:${current.chosen}`] : undefined;
+    if (!bridge) return;
+    const id = ++traceRunId.current;
+    setPanel({ kind: "loading" });
+    const r = await runSnippet(bridge.trace_setup);
+    if (traceRunId.current === id) setPanel({ kind: "snippet", output: r.output, error: r.error });
+  }
+
+  // Bridge resolved: the canonical line fills in (effectiveFilled catches up, which also
+  // reruns the partial trace) and the next round begins.
+  function endBridge() {
+    setBridging(false);
+    next();
   }
 
   // Run the constructed Python in Pyodide against the tests, then reveal everything. runSolution
@@ -151,6 +180,7 @@ export default function Player({ puzzle }: { puzzle: Puzzle }) {
     setRoundIdx(0);
     setAnswers(EMPTY);
     setResults(null);
+    setBridging(false);
     traceRunId.current++; // invalidate any in-flight trace
     setPanel({ kind: "idle" });
     setPhase("building"); // language intentionally kept; Pyodide stays loaded for the next run
@@ -236,11 +266,11 @@ export default function Player({ puzzle }: { puzzle: Puzzle }) {
               <LangToggle language={language} setLanguage={setLanguage} />
             </div>
             {puzzle.constructionMode === "diff" ? (
-              <DiffPanel puzzle={puzzle} filledThroughRound={lockedCount} language={language} />
+              <DiffPanel puzzle={puzzle} filledThroughRound={effectiveFilled} language={language} />
             ) : (
               <ConstructedCode
                 puzzle={puzzle}
-                completedThroughRound={lockedCount}
+                completedThroughRound={effectiveFilled}
                 language={language}
               />
             )}
@@ -277,16 +307,28 @@ export default function Player({ puzzle }: { puzzle: Puzzle }) {
         </section>
       )}
 
-      {/* [D] Next round — only once the current round has a selection */}
-      {isBuilding && current && (
+      {/* [D] After a correct pick: advance. After a wrong pick: the bridge takes over —
+          its Continue is the only way forward (keyed by round so its timer/state reset). */}
+      {isBuilding && current && !bridging && (
         <div className={NARROW}>
           <button
             type="button"
             onClick={next}
-            className="mt-5 w-full rounded-lg bg-blue-600 px-4 py-3 font-semibold text-white transition-colors hover:bg-blue-700"
+            className="mt-5 w-full cursor-pointer rounded-lg bg-blue-600 px-4 py-3 font-semibold text-white transition-colors hover:bg-blue-700"
           >
             {isLast ? "Done — review →" : "Next round →"}
           </button>
+        </div>
+      )}
+      {isBuilding && current && bridging && (
+        <div className={NARROW}>
+          <BridgeCard
+            key={roundIdx}
+            bridge={bridges[`${roundIdx}:${current.chosen}`] ?? null}
+            language={language}
+            onShowMe={showBridgeTrace}
+            onContinue={endBridge}
+          />
         </div>
       )}
 

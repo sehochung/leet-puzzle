@@ -23,6 +23,8 @@ export type TestRunResult = {
 interface PyodideInterface {
   runPythonAsync(code: string): Promise<unknown>;
   globals: { get(name: string): unknown };
+  // batched delivers one string per printed line; calling with no args restores the default.
+  setStdout(options?: { batched?: (line: string) => void }): void;
 }
 type LoadPyodide = (options: { indexURL: string }) => Promise<PyodideInterface>;
 // `loadPyodide` is attached to window by the injected CDN script; this typed view avoids `any`.
@@ -243,6 +245,26 @@ def __trace_run(__code, __entry, __input_json, __stub_line):
             __result["returnJson"] = None
     return json.dumps(__result)
 `;
+
+// Runs a self-contained bridge "Show me" snippet, capturing printed lines. This is a
+// deliberately separate path from runTraced: the snippet demonstrates the WRONG choice
+// in isolation and prints its own evidence — it never touches the constructed program.
+// Same never-throw contract; whatever printed before an error is still returned.
+export async function runSnippet(code: string): Promise<{ output: string; error: string | null }> {
+  const lines: string[] = [];
+  try {
+    const pyodide = await getPyodide();
+    pyodide.setStdout({ batched: (line) => lines.push(line) });
+    try {
+      await pyodide.runPythonAsync(code);
+    } finally {
+      pyodide.setStdout();
+    }
+    return { output: lines.join("\n"), error: null };
+  } catch (e) {
+    return { output: lines.join("\n"), error: e instanceof Error ? e.message : String(e) };
+  }
+}
 
 type RawTraceResult = Omit<TraceRunResult, "steps"> & {
   steps: Array<{ line: number; changed: Record<string, string> }>;
