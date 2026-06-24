@@ -1,7 +1,7 @@
 "use client";
 
 import type { Language } from "@/lib/puzzle";
-import type { TraceRunResult } from "@/lib/run-python";
+import type { LoadStage, TraceRunResult } from "@/lib/run-python";
 
 // What the debugger panel is showing. "trace" is a partial/full run of the
 // constructed code; "snippet" is captured stdout (the bridge "Show me" path,
@@ -46,10 +46,12 @@ export default function DebuggerPanel({
   view,
   language,
   runtimeReady,
+  loadStage = null,
 }: {
   view: PanelView;
   language: Language;
   runtimeReady: boolean;
+  loadStage?: LoadStage | null;
 }) {
   const frame =
     "rounded-lg border border-black/10 bg-black/[0.02] dark:border-white/15 dark:bg-white/[0.03]";
@@ -66,14 +68,20 @@ export default function DebuggerPanel({
   }
 
   if (view.kind === "idle" || view.kind === "loading") {
+    const loadingText =
+      loadStage === "downloading"
+        ? "Downloading Python runtime…"
+        : loadStage === "booting"
+          ? "Starting Python runtime…"
+          : "Loading Python runtime…";
     const note =
       view.kind === "loading"
         ? runtimeReady
           ? "Running…"
-          : "Loading Python runtime…"
+          : loadingText
         : runtimeReady
           ? "Lock in your first pick to run the code so far."
-          : "Loading Python runtime…";
+          : loadingText;
     return (
       <div className={`${frame} p-4`}>
         <p className="text-sm opacity-60">{note}</p>

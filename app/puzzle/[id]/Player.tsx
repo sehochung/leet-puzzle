@@ -12,6 +12,7 @@ import {
   runSnippet,
   runTraced,
   parseEntryPoint,
+  type LoadStage,
   type TestRunResult,
 } from "@/lib/run-python";
 import BridgeCard from "./BridgeCard";
@@ -72,6 +73,8 @@ export default function Player({ puzzle, bridges }: { puzzle: Puzzle; bridges: B
   const [results, setResults] = useState<TestRunResult[] | null>(null);
   const [panel, setPanel] = useState<PanelView>({ kind: "idle" });
   const [runtimeReady, setRuntimeReady] = useState(false);
+  // Coarse worker boot stage (downloading → booting → ready), shown while the runtime warms.
+  const [loadStage, setLoadStage] = useState<LoadStage | null>(null);
   // A wrong pick opens a bridge; the round is locked but its slot stays unfilled (and
   // the partial run held back) until the bridge's Continue — per the mechanic, the
   // correct code "arrives" as the resolution of the bridge, not alongside the mistake.
@@ -88,7 +91,9 @@ export default function Player({ puzzle, bridges }: { puzzle: Puzzle; bridges: B
   // preload is ignored: the first real run retries and surfaces the error in the panel.
   useEffect(() => {
     let on = true;
-    preloadPyodide().then(
+    preloadPyodide((stage) => {
+      if (on) setLoadStage(stage);
+    }).then(
       () => {
         if (on) setRuntimeReady(true);
       },
@@ -316,7 +321,12 @@ export default function Player({ puzzle, bridges }: { puzzle: Puzzle; bridges: B
             <div className="mb-2 flex h-7 items-center">
               <p className="text-xs font-semibold uppercase tracking-wide opacity-50">Debugger</p>
             </div>
-            <DebuggerPanel view={panel} language={language} runtimeReady={runtimeReady} />
+            <DebuggerPanel
+              view={panel}
+              language={language}
+              runtimeReady={runtimeReady}
+              loadStage={loadStage}
+            />
           </div>
         </section>
       )}
