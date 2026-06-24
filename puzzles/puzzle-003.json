@@ -69,7 +69,7 @@
     {
       "id": 2,
       "stage": "iterate",
-      "question": "How do you advance toward the middle?",
+      "question": "With the cleaned characters and a pointer at each end, how do you advance toward the middle?",
       "options": [
         {
           "conceptLabel": "While the pointers have not crossed",
@@ -109,7 +109,7 @@
     {
       "id": 3,
       "stage": "transform",
-      "question": "What check detects that it is NOT a palindrome?",
+      "question": "Each step you compare the mirrored pair. What check detects that it is NOT a palindrome?",
       "options": [
         {
           "conceptLabel": "Bail out when the characters are equal",
@@ -149,7 +149,7 @@
     {
       "id": 4,
       "stage": "update",
-      "question": "How do the pointers move each step?",
+      "question": "When the mirrored pair matches, how do the pointers move on to the next pair?",
       "options": [
         {
           "conceptLabel": "Step lo forward and hi backward",
@@ -189,7 +189,7 @@
     {
       "id": 5,
       "stage": "output",
-      "question": "If the loop finds no mismatch, what is the result?",
+      "question": "The loop returns False on the first mismatch. If it finds none, what do you return?",
       "options": [
         {
           "conceptLabel": "False",

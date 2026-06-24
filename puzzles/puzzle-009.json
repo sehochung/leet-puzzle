@@ -69,7 +69,7 @@
     {
       "id": 2,
       "stage": "iterate",
-      "question": "How many times do you advance the recurrence?",
+      "question": "With the two rolling counts seeded, how many times do you advance the recurrence?",
       "options": [
         {
           "conceptLabel": "n times",
@@ -109,7 +109,7 @@
     {
       "id": 3,
       "stage": "transform",
-      "question": "What is the next count?",
+      "question": "On each step, from the two previous counts, what is the next count?",
       "options": [
         {
           "conceptLabel": "The product of the two counts",
@@ -149,7 +149,7 @@
     {
       "id": 4,
       "stage": "update",
-      "question": "How do you roll the window forward?",
+      "question": "Having computed the next count, how do you roll the two counts forward?",
       "options": [
         {
           "conceptLabel": "Shift b into a, and nxt into b",
@@ -189,7 +189,7 @@
     {
       "id": 5,
       "stage": "output",
-      "question": "What is the answer?",
+      "question": "After advancing n times, what is the answer?",
       "options": [
         {
           "conceptLabel": "a, the count for n",

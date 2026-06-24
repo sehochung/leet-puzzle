@@ -68,7 +68,7 @@
     {
       "id": 2,
       "stage": "iterate",
-      "question": "How long do you sweep?",
+      "question": "With pointers at both ends and best at zero, how long do you sweep?",
       "options": [
         {
           "conceptLabel": "Once per index, left to right",
@@ -108,7 +108,7 @@
     {
       "id": 3,
       "stage": "transform",
-      "question": "How do you compute this pair's area?",
+      "question": "For the current pair of walls, how do you compute the water it holds?",
       "options": [
         {
           "conceptLabel": "Sum of the heights times the width",
@@ -148,7 +148,7 @@
     {
       "id": 4,
       "stage": "update",
-      "question": "After scoring, which pointer should move?",
+      "question": "After updating best with this area, which wall do you drop to look for a bigger one?",
       "options": [
         {
           "conceptLabel": "Always advance the left pointer",
@@ -188,7 +188,7 @@
     {
       "id": 5,
       "stage": "output",
-      "question": "What do you return?",
+      "question": "When the pointers meet, what do you return?",
       "options": [
         {
           "conceptLabel": "The best area found",

@@ -69,7 +69,7 @@
     {
       "id": 2,
       "stage": "iterate",
-      "question": "How do you scan the string?",
+      "question": "With the last-seen map, window start, and best ready, how do you scan the string?",
       "options": [
         {
           "conceptLabel": "Enumerate index and character",
@@ -109,7 +109,7 @@
     {
       "id": 3,
       "stage": "transform",
-      "question": "When the current char repeats inside the window, how do you react?",
+      "question": "As you reach each character c at index i, how do you react when c repeats inside the window?",
       "options": [
         {
           "conceptLabel": "Reset the window start to zero",
@@ -149,7 +149,7 @@
     {
       "id": 4,
       "stage": "update",
-      "question": "What do you record at each character?",
+      "question": "With the window start fixed, what do you record for c before measuring the window?",
       "options": [
         {
           "conceptLabel": "Update best but don't store the position",
@@ -189,7 +189,7 @@
     {
       "id": 5,
       "stage": "output",
-      "question": "What do you return?",
+      "question": "When the scan finishes, what do you return?",
       "options": [
         {
           "conceptLabel": "The best window length",

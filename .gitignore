@@ -30,6 +30,9 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
+# session terminal captures (handoff logs are .md, not .log)
+sessions/*.log
+
 # env files (can opt-in for committing if needed)
 .env*
 # ...but the example template carries no secrets and must be tracked.

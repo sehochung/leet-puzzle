@@ -69,7 +69,7 @@
     {
       "id": 2,
       "stage": "iterate",
-      "question": "What is the loop condition?",
+      "question": "With lo and hi over the array, what is the loop condition?",
       "options": [
         {
           "conceptLabel": "While lo is strictly less than hi",
@@ -109,7 +109,7 @@
     {
       "id": 3,
       "stage": "transform",
-      "question": "What do you compute each step?",
+      "question": "Each step, what index do you compute to probe the middle?",
       "options": [
         {
           "conceptLabel": "The midpoint of the end values",
@@ -149,7 +149,7 @@
     {
       "id": 4,
       "stage": "update",
-      "question": "How do you pick the half containing the minimum?",
+      "question": "Comparing the midpoint against the high end, how do you pick the half holding the minimum?",
       "options": [
         {
           "conceptLabel": "If mid exceeds the high value go right, else keep mid",
@@ -189,7 +189,7 @@
     {
       "id": 5,
       "stage": "output",
-      "question": "What do you return?",
+      "question": "When lo and hi converge, what do you return?",
       "options": [
         {
           "conceptLabel": "The element at lo",

@@ -69,7 +69,7 @@
     {
       "id": 2,
       "stage": "iterate",
-      "question": "How does the search loop run?",
+      "question": "With lo and hi spanning the array, how does the search loop run?",
       "options": [
         {
           "conceptLabel": "Linearly over every index",
@@ -109,7 +109,7 @@
     {
       "id": 3,
       "stage": "transform",
-      "question": "What do you compute and check first each step?",
+      "question": "Inside the loop, what do you compute and check first each step?",
       "options": [
         {
           "conceptLabel": "Midpoint as the average of the end values",
@@ -149,7 +149,7 @@
     {
       "id": 4,
       "stage": "update",
-      "question": "Which half do you keep?",
+      "question": "When mid isn't the target, which half do you keep, given the array is rotated?",
       "options": [
         {
           "conceptLabel": "Find the sorted half, then narrow by whether target lies in it",

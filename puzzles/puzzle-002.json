@@ -68,7 +68,7 @@
     {
       "id": 2,
       "stage": "iterate",
-      "question": "How do you scan so you hold both the value and its index?",
+      "question": "With the value-to-index map ready, how do you scan so you hold both the value and its index?",
       "options": [
         {
           "conceptLabel": "Enumerate to get index and value together",
@@ -108,7 +108,7 @@
     {
       "id": 3,
       "stage": "transform",
-      "question": "For the current element x, what value completes the pair?",
+      "question": "Enumerating gives you each value x and its index. What value completes the pair with x?",
       "options": [
         {
           "conceptLabel": "x itself",
@@ -148,7 +148,7 @@
     {
       "id": 4,
       "stage": "update",
-      "question": "What is the safe order of operations at each step?",
+      "question": "You can now compute the complement need. In what order do you check seen and store x?",
       "options": [
         {
           "conceptLabel": "Store x first, then check for the complement",
@@ -188,7 +188,7 @@
     {
       "id": 5,
       "stage": "output",
-      "question": "The input guarantees one solution. What's the fallback return?",
+      "question": "The loop returns the pair as soon as it finds it. Given one guaranteed solution, what's the fallback return?",
       "options": [
         {
           "conceptLabel": "An empty list — the not-found fallback",

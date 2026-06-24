@@ -68,7 +68,7 @@
     {
       "id": 2,
       "stage": "iterate",
-      "question": "How do you grow the window?",
+      "question": "With the need counts, missing total, left, and best set up, how do you grow the window?",
       "options": [
         {
           "conceptLabel": "Advance the right edge over each character of s",
@@ -108,7 +108,7 @@
     {
       "id": 3,
       "stage": "transform",
-      "question": "How do you fold the new right-edge character into the counts?",
+      "question": "As the right edge takes in character c, how do you fold it into the counts and missing?",
       "options": [
         {
           "conceptLabel": "Increment the count for c",
@@ -148,7 +148,7 @@
     {
       "id": 4,
       "stage": "update",
-      "question": "Once the window is valid, how do you contract from the left?",
+      "question": "When missing reaches 0 the window covers t. How do you contract it from the left?",
       "options": [
         {
           "conceptLabel": "While valid, record the shortest and shrink, restoring counts",
@@ -188,7 +188,7 @@
     {
       "id": 5,
       "stage": "output",
-      "question": "What do you return?",
+      "question": "After the full scan, what do you return?",
       "options": [
         {
           "conceptLabel": "The best window string",

@@ -69,7 +69,7 @@
     {
       "id": 2,
       "stage": "iterate",
-      "question": "How do you process the array?",
+      "question": "With the tails list ready, how do you process the array?",
       "options": [
         {
           "conceptLabel": "Each value, left to right",
@@ -109,7 +109,7 @@
     {
       "id": 3,
       "stage": "transform",
-      "question": "Where does the current value belong among the tails?",
+      "question": "For each value x, where does it belong among the sorted tails?",
       "options": [
         {
           "conceptLabel": "A linear scan for the first tail >= x",
@@ -149,7 +149,7 @@
     {
       "id": 4,
       "stage": "update",
-      "question": "Given that position, what do you do?",
+      "question": "Given that position i in tails, what do you do with x?",
       "options": [
         {
           "conceptLabel": "Append if at the end, else overwrite that tail",
@@ -189,7 +189,7 @@
     {
       "id": 5,
       "stage": "output",
-      "question": "What is the LIS length?",
+      "question": "Once every value is processed, what is the LIS length?",
       "options": [
         {
           "conceptLabel": "The number of tails",
