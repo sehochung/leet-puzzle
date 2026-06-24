@@ -2,6 +2,11 @@ import Link from "next/link";
 import { loadAllPuzzles } from "@/lib/puzzles";
 import type { Topic } from "@/lib/puzzle";
 
+// Render per-request so Next stamps the proxy's per-request CSP nonce onto this page's
+// inline bootstrap script. A statically prerendered page would ship without a nonce and
+// its inline script would be blocked by the nonce-based CSP (see proxy.ts).
+export const dynamic = "force-dynamic";
+
 const TOPIC_LABEL: Record<Topic, string> = {
   hashmap: "Hash Map",
   "two-pointer": "Two Pointer",
