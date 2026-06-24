@@ -20,6 +20,12 @@ export default async function Home() {
         <p className="mt-1 text-sm opacity-70">
           Daily interview-intuition drills — one base problem, five quick rounds.
         </p>
+        <Link
+          href="/today"
+          className="mt-4 inline-flex items-center rounded-md bg-foreground px-4 py-2 text-sm font-semibold text-background transition-opacity hover:opacity-90"
+        >
+          {"Play today's puzzle →"}
+        </Link>
       </header>
 
       {errors.length > 0 && (
