@@ -232,12 +232,12 @@
       "kind": "complexity",
       "question": "Time and extra space of the halving loop?",
       "options": [
-        "O(log n) time, O(1) space",
         "O(log n) time, O(log n) space",
+        "O(log n) time, O(1) space",
         "O(n) time, O(1) space",
         "O(n log n) time, O(1) space"
       ],
-      "correctIndex": 0,
+      "correctIndex": 1,
       "explanation": "Iterative halving — no recursion stack, two indices. Each comparison discards half the range."
     },
     {
@@ -256,12 +256,12 @@
       "kind": "variation",
       "question": "Why compare nums[mid] against nums[hi] instead of nums[lo]?",
       "options": [
-        "nums[mid] > nums[lo] is ambiguous — [1,2,3] (min at lo) and [3,4,1] (min right of mid) both satisfy it, so the lo-comparison can't pick a side",
         "nums[hi] is cached by the CPU",
         "lo changes more often than hi",
-        "Either comparison works identically"
+        "Either comparison works identically",
+        "nums[mid] > nums[lo] is ambiguous — [1,2,3] (min at lo) and [3,4,1] (min right of mid) both satisfy it, so the lo-comparison can't pick a side"
       ],
-      "correctIndex": 0,
+      "correctIndex": 3,
       "explanation": "Against hi the signal is clean: mid > hi puts the drop — and the minimum — strictly right of mid; mid ≤ hi puts it at mid or left. Against lo, sorted and rotated cases collide."
     }
   ]

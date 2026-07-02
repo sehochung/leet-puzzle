@@ -232,24 +232,24 @@
       "kind": "complexity",
       "question": "Your solution builds a cleaned list first. Time and extra space?",
       "options": [
-        "O(n) time, O(1) space",
         "O(n) time, O(n) space",
+        "O(n) time, O(1) space",
         "O(n log n) time, O(n) space",
         "O(n²) time, O(1) space"
       ],
-      "correctIndex": 1,
+      "correctIndex": 0,
       "explanation": "Cleaning copies up to n characters — O(n) space. To reach O(1) you'd keep the raw string and have each pointer skip non-alphanumerics in place."
     },
     {
       "kind": "edge-case",
       "question": "Why is \"0P\" a classic trap input for implementations that lowercase with bit tricks?",
       "options": [
-        "Digits and letters can collide under OR 0x20 — '0' wrongly matches 'p'",
         "The cleaned string is empty",
         "Odd-length strings need special handling",
-        "isalnum() rejects digits"
+        "isalnum() rejects digits",
+        "Digits and letters can collide under OR 0x20 — '0' wrongly matches 'p'"
       ],
-      "correctIndex": 0,
+      "correctIndex": 3,
       "explanation": "c | 0x20 maps 'P' (0x50) to 'p' (0x70) — but it also maps '0' (0x30) to 'p' (0x70). A real lowercase keeps digits intact, so \"0p\" reversed is \"p0\": not a palindrome."
     },
     {
@@ -257,11 +257,11 @@
       "question": "Follow-up (Valid Palindrome II): you may delete at most ONE character. What is the standard O(n) approach?",
       "options": [
         "Try deleting every character and re-check — O(n²)",
-        "On the first mismatch, branch: skip the left char OR the right char, and check both remainders",
         "Dynamic programming over all substrings",
+        "On the first mismatch, branch: skip the left char OR the right char, and check both remainders",
         "Recurse with a memo table"
       ],
-      "correctIndex": 1,
+      "correctIndex": 2,
       "explanation": "Two pointers run until the first mismatch; the answer is then palindrome(lo+1..hi) OR palindrome(lo..hi-1) — two more linear checks, still O(n)."
     }
   ]

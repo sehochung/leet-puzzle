@@ -15,12 +15,12 @@
       "question": "One clarifying question before you design. Which answer changes the architecture most?",
       "options": [
         {
-          "conceptLabel": "Is the limit per-user across ALL servers, or per single server?",
-          "rationale": "This is the fork in the road: per-server limits need only local memory, but a fleet-wide per-user limit forces shared state — which drags in a store, atomicity, and a failure story. Everything downstream depends on this answer."
-        },
-        {
           "conceptLabel": "Which HTTP status code should rejected requests get?",
           "rationale": "It's 429 by convention — a one-line detail with zero architectural consequence. Burning your clarifying question on it tells the interviewer you can't rank concerns."
+        },
+        {
+          "conceptLabel": "Is the limit per-user across ALL servers, or per single server?",
+          "rationale": "This is the fork in the road: per-server limits need only local memory, but a fleet-wide per-user limit forces shared state — which drags in a store, atomicity, and a failure story. Everything downstream depends on this answer."
         },
         {
           "conceptLabel": "Which web framework do the API servers use?",
@@ -31,17 +31,13 @@
           "rationale": "Endpoint count barely matters — limits key on the caller, not the route (per-route limits are a config detail on the same machinery). It doesn't reshape any component."
         }
       ],
-      "correctIndex": 0
+      "correctIndex": 1
     },
     {
       "id": 2,
       "stage": "api",
       "question": "Where in the request path does the limiter belong?",
       "options": [
-        {
-          "conceptLabel": "In the gateway/middleware layer, checked BEFORE the request does any real work",
-          "rationale": "The whole point is to shed abusive load cheaply. A gateway check rejects in microseconds, before the request touches app logic or the database — one enforcement point, uniform across every endpoint."
-        },
         {
           "conceptLabel": "Inside each endpoint handler, per route",
           "rationale": "N endpoints means N chances to forget one, and the request has already paid routing, auth, and app-server capacity before being rejected. Enforcement belongs at the boundary, once."
@@ -53,9 +49,13 @@
         {
           "conceptLabel": "In the database layer, rolling back over-limit queries",
           "rationale": "By the time the database sees the query, the request has consumed everything you were trying to protect. Rejecting after the work is done is load-shedding theater."
+        },
+        {
+          "conceptLabel": "In the gateway/middleware layer, checked BEFORE the request does any real work",
+          "rationale": "The whole point is to shed abusive load cheaply. A gateway check rejects in microseconds, before the request touches app logic or the database — one enforcement point, uniform across every endpoint."
         }
       ],
-      "correctIndex": 0
+      "correctIndex": 3
     },
     {
       "id": 3,
@@ -87,10 +87,6 @@
       "question": "Limits are fleet-wide, so counters must be shared. Where does that state live?",
       "options": [
         {
-          "conceptLabel": "A centralized in-memory store (Redis) with atomic ops, sharded by user",
-          "rationale": "Atomic INCR/EXPIRE (or a small Lua script for token math) makes check-and-update race-free, sub-millisecond, and sharding by user key spreads the load. This is the industry-standard shape."
-        },
-        {
           "conceptLabel": "Each gateway node's local memory",
           "rationale": "With N gateways behind a load balancer, a user's requests scatter across all of them — each node sees 1/N of the traffic and the real limit silently becomes N × 100/min. Local state can't enforce a global limit."
         },
@@ -99,11 +95,15 @@
           "rationale": "10k req/s of lock-update-commit on hot user rows will melt the database you built the limiter to protect. Durable storage and ACID are the wrong tools for ephemeral counters."
         },
         {
+          "conceptLabel": "A centralized in-memory store (Redis) with atomic ops, sharded by user",
+          "rationale": "Atomic INCR/EXPIRE (or a small Lua script for token math) makes check-and-update race-free, sub-millisecond, and sharding by user key spreads the load. This is the industry-standard shape."
+        },
+        {
           "conceptLabel": "A config file on each server, re-synced every minute",
           "rationale": "Counters change thousands of times per second; a minute-stale file is not state, it's a snapshot of history. File sync is for configuration, not for live coordination."
         }
       ],
-      "correctIndex": 0
+      "correctIndex": 2
     },
     {
       "id": 5,
@@ -132,27 +132,135 @@
   ],
   "diagram": {
     "nodes": [
-      { "id": "client", "label": "Clients", "sublabel": "incl. abusers", "shape": "actor", "x": 20, "y": 130, "w": 100, "h": 60, "appearsAtRound": 0 },
-      { "id": "gw", "label": "API gateway", "sublabel": "rate limiter", "shape": "box", "x": 190, "y": 130, "w": 140, "h": 70, "appearsAtRound": 2 },
-      { "id": "algo", "label": "Token bucket", "sublabel": "rate + burst, O(1)/user", "shape": "box", "x": 190, "y": 25, "w": 140, "h": 60, "appearsAtRound": 3 },
-      { "id": "api", "label": "API servers", "shape": "box", "x": 540, "y": 130, "w": 140, "h": 65, "appearsAtRound": 2 },
-      { "id": "redis", "label": "Redis counters", "sublabel": "sharded, atomic INCR", "shape": "store", "x": 190, "y": 250, "w": 140, "h": 60, "appearsAtRound": 4 },
-      { "id": "local", "label": "Local fallback", "sublabel": "coarse per-node caps", "shape": "box", "x": 400, "y": 250, "w": 140, "h": 60, "appearsAtRound": 5 }
+      {
+        "id": "client",
+        "label": "Clients",
+        "sublabel": "incl. abusers",
+        "shape": "actor",
+        "x": 20,
+        "y": 130,
+        "w": 100,
+        "h": 60,
+        "appearsAtRound": 0
+      },
+      {
+        "id": "gw",
+        "label": "API gateway",
+        "sublabel": "rate limiter",
+        "shape": "box",
+        "x": 190,
+        "y": 130,
+        "w": 140,
+        "h": 70,
+        "appearsAtRound": 2
+      },
+      {
+        "id": "algo",
+        "label": "Token bucket",
+        "sublabel": "rate + burst, O(1)/user",
+        "shape": "box",
+        "x": 190,
+        "y": 25,
+        "w": 140,
+        "h": 60,
+        "appearsAtRound": 3
+      },
+      {
+        "id": "api",
+        "label": "API servers",
+        "shape": "box",
+        "x": 540,
+        "y": 130,
+        "w": 140,
+        "h": 65,
+        "appearsAtRound": 2
+      },
+      {
+        "id": "redis",
+        "label": "Redis counters",
+        "sublabel": "sharded, atomic INCR",
+        "shape": "store",
+        "x": 190,
+        "y": 250,
+        "w": 140,
+        "h": 60,
+        "appearsAtRound": 4
+      },
+      {
+        "id": "local",
+        "label": "Local fallback",
+        "sublabel": "coarse per-node caps",
+        "shape": "box",
+        "x": 400,
+        "y": 250,
+        "w": 140,
+        "h": 60,
+        "appearsAtRound": 5
+      }
     ],
     "edges": [
-      { "from": "client", "to": "gw", "label": "request", "appearsAtRound": 2 },
-      { "from": "gw", "to": "api", "label": "allowed · else 429", "appearsAtRound": 2 },
-      { "from": "gw", "to": "algo", "label": "per-user state", "appearsAtRound": 3 },
-      { "from": "gw", "to": "redis", "label": "atomic check", "appearsAtRound": 4 },
-      { "from": "gw", "to": "local", "label": "if Redis down", "appearsAtRound": 5 }
+      {
+        "from": "client",
+        "to": "gw",
+        "label": "request",
+        "appearsAtRound": 2
+      },
+      {
+        "from": "gw",
+        "to": "api",
+        "label": "allowed · else 429",
+        "appearsAtRound": 2
+      },
+      {
+        "from": "gw",
+        "to": "algo",
+        "label": "per-user state",
+        "appearsAtRound": 3
+      },
+      {
+        "from": "gw",
+        "to": "redis",
+        "label": "atomic check",
+        "appearsAtRound": 4
+      },
+      {
+        "from": "gw",
+        "to": "local",
+        "label": "if Redis down",
+        "appearsAtRound": 5
+      }
     ]
   },
   "capacity": [
-    { "label": "Cluster peak", "value": "10,000 req/s", "appearsAtRound": 1 },
-    { "label": "Per-user limit", "value": "100 req/min", "appearsAtRound": 1 },
-    { "label": "State per user", "value": "2 numbers ≈ 16 B", "appearsAtRound": 3 },
-    { "label": "10M users", "value": "≈ 160 MB total", "appearsAtRound": 3 },
-    { "label": "Redis throughput", "value": "~100k ops/s per shard", "appearsAtRound": 4 },
-    { "label": "Latency budget", "value": "< 1–2 ms per request", "appearsAtRound": 5 }
+    {
+      "label": "Cluster peak",
+      "value": "10,000 req/s",
+      "appearsAtRound": 1
+    },
+    {
+      "label": "Per-user limit",
+      "value": "100 req/min",
+      "appearsAtRound": 1
+    },
+    {
+      "label": "State per user",
+      "value": "2 numbers ≈ 16 B",
+      "appearsAtRound": 3
+    },
+    {
+      "label": "10M users",
+      "value": "≈ 160 MB total",
+      "appearsAtRound": 3
+    },
+    {
+      "label": "Redis throughput",
+      "value": "~100k ops/s per shard",
+      "appearsAtRound": 4
+    },
+    {
+      "label": "Latency budget",
+      "value": "< 1–2 ms per request",
+      "appearsAtRound": 5
+    }
   ]
 }

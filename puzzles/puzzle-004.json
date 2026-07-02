@@ -231,12 +231,12 @@
       "kind": "complexity",
       "question": "The two-pointer sweep — time and extra space?",
       "options": [
-        "O(n) time, O(1) space",
         "O(n log n) time, O(1) space",
+        "O(n) time, O(1) space",
         "O(n²) time, O(1) space",
         "O(n) time, O(n) space"
       ],
-      "correctIndex": 0,
+      "correctIndex": 1,
       "explanation": "Each iteration moves one pointer inward, so the loop runs at most n−1 times with constant work — O(n) time, two indices and a best value — O(1) space."
     },
     {
@@ -255,12 +255,12 @@
       "kind": "variation",
       "question": "The interviewer challenges: 'Prove moving the SHORTER line never skips the best answer.' Which argument works?",
       "options": [
-        "Any container that keeps the shorter line is capped at its height but is strictly narrower, so it can't beat the area just recorded",
         "The tallest line is always part of the answer",
         "Sorting the heights preserves all areas",
-        "The pointers always meet at the maximum height"
+        "The pointers always meet at the maximum height",
+        "Any container that keeps the shorter line is capped at its height but is strictly narrower, so it can't beat the area just recorded"
       ],
-      "correctIndex": 0,
+      "correctIndex": 3,
       "explanation": "Pairing the shorter line with ANY nearer partner keeps the same height cap with less width — all those pairs are dominated by the one just scored, so discarding the shorter line is lossless."
     }
   ]

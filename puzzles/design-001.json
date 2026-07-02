@@ -15,10 +15,6 @@
       "question": "Before drawing anything, you get ONE clarifying question. Which matters most?",
       "options": [
         {
-          "conceptLabel": "What's the total volume and the read:write ratio?",
-          "rationale": "Load shapes everything: 100:1 reads tells you the redirect path is the hot path, which decides where the cache, the replicas, and your attention go. Ask about load before features."
-        },
-        {
           "conceptLabel": "Should users be able to pick custom aliases?",
           "rationale": "A real feature question, but it only tweaks the write path's uniqueness check. It doesn't reshape the architecture the way the read:write ratio does — ask it second, not first."
         },
@@ -27,11 +23,15 @@
           "rationale": "Premature. The design should be provider-agnostic boxes (LB, app tier, KV store, cache); picking a vendor changes none of the reasoning the interviewer wants to see."
         },
         {
+          "conceptLabel": "What's the total volume and the read:write ratio?",
+          "rationale": "Load shapes everything: 100:1 reads tells you the redirect path is the hot path, which decides where the cache, the replicas, and your attention go. Ask about load before features."
+        },
+        {
           "conceptLabel": "What should the link-creation page look like?",
           "rationale": "UI is out of scope in a systems interview. Spending your clarifying question here signals you don't know where the hard part of the problem lives."
         }
       ],
-      "correctIndex": 0
+      "correctIndex": 2
     },
     {
       "id": 2,
@@ -63,12 +63,12 @@
       "question": "How do you generate the short code for each new link?",
       "options": [
         {
-          "conceptLabel": "Base62-encode a unique ID from a counter service — 7 chars covers trillions",
-          "rationale": "Unique IDs can't collide, and base62 (a-z, A-Z, 0-9) packs 62^7 ≈ 3.5 trillion codes into 7 characters — decades of headroom at 100M/month. The counter can be sharded (ranges) to avoid a single point."
-        },
-        {
           "conceptLabel": "Hash the URL (e.g. MD5) and take the first 7 characters",
           "rationale": "Truncated hashes collide — birthday math says you'll see collisions well before exhausting the space, so every write needs a check-and-retry loop. Deduping same URLs sounds nice but most products want distinct links per user anyway."
+        },
+        {
+          "conceptLabel": "Base62-encode a unique ID from a counter service — 7 chars covers trillions",
+          "rationale": "Unique IDs can't collide, and base62 (a-z, A-Z, 0-9) packs 62^7 ≈ 3.5 trillion codes into 7 characters — decades of headroom at 100M/month. The counter can be sharded (ranges) to avoid a single point."
         },
         {
           "conceptLabel": "Expose an auto-increment row ID directly as the code",
@@ -79,17 +79,13 @@
           "rationale": "A 36-character code in a product whose entire value is being SHORT. Random 7-char codes could work, but then you're back to collision checks — the encoded counter gives uniqueness for free."
         }
       ],
-      "correctIndex": 0
+      "correctIndex": 1
     },
     {
       "id": 4,
       "stage": "scale",
       "question": "Traffic grows 10x and reads are crushing the store. What's the highest-leverage addition?",
       "options": [
-        {
-          "conceptLabel": "Cache hot code-to-URL mappings in memory (and at the CDN edge)",
-          "rationale": "Redirect lookups are immutable and tiny — the perfect cache workload. A small in-memory cache absorbs the popular head of the traffic (links are extremely skewed), and hit rates north of 90% are typical."
-        },
         {
           "conceptLabel": "Shard the write path across more databases",
           "rationale": "Writes are 40/s — a rounding error for any store. Sharding the cold path adds operational complexity exactly where the numbers say there's no problem. The reads are the fire."
@@ -101,9 +97,13 @@
         {
           "conceptLabel": "Put a message queue in front of the reads",
           "rationale": "Queues decouple and absorb WRITE bursts at the cost of latency — the one thing a redirect can't afford. A user clicking a link can't wait for their GET to be dequeued."
+        },
+        {
+          "conceptLabel": "Cache hot code-to-URL mappings in memory (and at the CDN edge)",
+          "rationale": "Redirect lookups are immutable and tiny — the perfect cache workload. A small in-memory cache absorbs the popular head of the traffic (links are extremely skewed), and hit rates north of 90% are typical."
         }
       ],
-      "correctIndex": 0
+      "correctIndex": 3
     },
     {
       "id": 5,
@@ -111,12 +111,12 @@
       "question": "Product wants per-click analytics. How do you add them without slowing redirects?",
       "options": [
         {
-          "conceptLabel": "Emit an async click event to a queue at redirect time; aggregate out-of-band",
-          "rationale": "Fire-and-forget keeps the hot path at one lookup + one enqueue (microseconds), and the aggregation pipeline can batch, retry, and evolve independently. Losing a rare event under failure is an acceptable trade for redirect speed."
-        },
-        {
           "conceptLabel": "Synchronously increment a counter row on every click",
           "rationale": "Now every redirect pays a write, and popular links serialize on one hot row — you've put a write bottleneck inside a read path you just spent a round making fast."
+        },
+        {
+          "conceptLabel": "Emit an async click event to a queue at redirect time; aggregate out-of-band",
+          "rationale": "Fire-and-forget keeps the hot path at one lookup + one enqueue (microseconds), and the aggregation pipeline can batch, retry, and evolve independently. Losing a rare event under failure is an acceptable trade for redirect speed."
         },
         {
           "conceptLabel": "Switch to 301 permanent redirects so browsers cache them",
@@ -127,36 +127,172 @@
           "rationale": "Logs scattered across an autoscaling fleet with no aggregation plan aren't analytics — they're an archaeology project. You've deferred the actual problem (collection + aggregation) without solving it."
         }
       ],
-      "correctIndex": 0
+      "correctIndex": 1
     }
   ],
   "diagram": {
     "nodes": [
-      { "id": "client", "label": "Client", "sublabel": "browser / app", "shape": "actor", "x": 20, "y": 140, "w": 100, "h": 60, "appearsAtRound": 0 },
-      { "id": "lb", "label": "Load balancer", "shape": "box", "x": 170, "y": 140, "w": 120, "h": 60, "appearsAtRound": 2 },
-      { "id": "app", "label": "App servers", "sublabel": "stateless", "shape": "box", "x": 340, "y": 140, "w": 120, "h": 60, "appearsAtRound": 2 },
-      { "id": "idgen", "label": "ID generator", "sublabel": "counter → base62", "shape": "box", "x": 340, "y": 30, "w": 120, "h": 60, "appearsAtRound": 3 },
-      { "id": "db", "label": "Link store", "sublabel": "code → URL (KV)", "shape": "store", "x": 540, "y": 140, "w": 150, "h": 65, "appearsAtRound": 3 },
-      { "id": "cache", "label": "Cache", "sublabel": "hot codes", "shape": "store", "x": 540, "y": 30, "w": 150, "h": 60, "appearsAtRound": 4 },
-      { "id": "queue", "label": "Event queue", "sublabel": "click events", "shape": "box", "x": 340, "y": 255, "w": 120, "h": 60, "appearsAtRound": 5 },
-      { "id": "analytics", "label": "Analytics", "sublabel": "batch aggregation", "shape": "store", "x": 540, "y": 255, "w": 150, "h": 60, "appearsAtRound": 5 }
+      {
+        "id": "client",
+        "label": "Client",
+        "sublabel": "browser / app",
+        "shape": "actor",
+        "x": 20,
+        "y": 140,
+        "w": 100,
+        "h": 60,
+        "appearsAtRound": 0
+      },
+      {
+        "id": "lb",
+        "label": "Load balancer",
+        "shape": "box",
+        "x": 170,
+        "y": 140,
+        "w": 120,
+        "h": 60,
+        "appearsAtRound": 2
+      },
+      {
+        "id": "app",
+        "label": "App servers",
+        "sublabel": "stateless",
+        "shape": "box",
+        "x": 340,
+        "y": 140,
+        "w": 120,
+        "h": 60,
+        "appearsAtRound": 2
+      },
+      {
+        "id": "idgen",
+        "label": "ID generator",
+        "sublabel": "counter → base62",
+        "shape": "box",
+        "x": 340,
+        "y": 30,
+        "w": 120,
+        "h": 60,
+        "appearsAtRound": 3
+      },
+      {
+        "id": "db",
+        "label": "Link store",
+        "sublabel": "code → URL (KV)",
+        "shape": "store",
+        "x": 540,
+        "y": 140,
+        "w": 150,
+        "h": 65,
+        "appearsAtRound": 3
+      },
+      {
+        "id": "cache",
+        "label": "Cache",
+        "sublabel": "hot codes",
+        "shape": "store",
+        "x": 540,
+        "y": 30,
+        "w": 150,
+        "h": 60,
+        "appearsAtRound": 4
+      },
+      {
+        "id": "queue",
+        "label": "Event queue",
+        "sublabel": "click events",
+        "shape": "box",
+        "x": 340,
+        "y": 255,
+        "w": 120,
+        "h": 60,
+        "appearsAtRound": 5
+      },
+      {
+        "id": "analytics",
+        "label": "Analytics",
+        "sublabel": "batch aggregation",
+        "shape": "store",
+        "x": 540,
+        "y": 255,
+        "w": 150,
+        "h": 60,
+        "appearsAtRound": 5
+      }
     ],
     "edges": [
-      { "from": "client", "to": "lb", "label": "GET /{code}", "appearsAtRound": 2 },
-      { "from": "lb", "to": "app", "appearsAtRound": 2 },
-      { "from": "app", "to": "idgen", "label": "new IDs", "appearsAtRound": 3 },
-      { "from": "app", "to": "db", "label": "lookup / insert", "appearsAtRound": 3 },
-      { "from": "app", "to": "cache", "label": "read-through", "appearsAtRound": 4 },
-      { "from": "app", "to": "queue", "label": "click event", "appearsAtRound": 5 },
-      { "from": "queue", "to": "analytics", "appearsAtRound": 5 }
+      {
+        "from": "client",
+        "to": "lb",
+        "label": "GET /{code}",
+        "appearsAtRound": 2
+      },
+      {
+        "from": "lb",
+        "to": "app",
+        "appearsAtRound": 2
+      },
+      {
+        "from": "app",
+        "to": "idgen",
+        "label": "new IDs",
+        "appearsAtRound": 3
+      },
+      {
+        "from": "app",
+        "to": "db",
+        "label": "lookup / insert",
+        "appearsAtRound": 3
+      },
+      {
+        "from": "app",
+        "to": "cache",
+        "label": "read-through",
+        "appearsAtRound": 4
+      },
+      {
+        "from": "app",
+        "to": "queue",
+        "label": "click event",
+        "appearsAtRound": 5
+      },
+      {
+        "from": "queue",
+        "to": "analytics",
+        "appearsAtRound": 5
+      }
     ]
   },
   "capacity": [
-    { "label": "Writes", "value": "100M/mo ≈ 40/s", "appearsAtRound": 1 },
-    { "label": "Reads (100:1)", "value": "≈ 4,000/s", "appearsAtRound": 1 },
-    { "label": "Code space", "value": "62⁷ ≈ 3.5 trillion", "appearsAtRound": 3 },
-    { "label": "Storage (5 yr @ ~500 B)", "value": "≈ 3 TB", "appearsAtRound": 3 },
-    { "label": "Hot set for cache", "value": "≈ 25 GB — fits in RAM", "appearsAtRound": 4 },
-    { "label": "Click events", "value": "4k/s, batched async", "appearsAtRound": 5 }
+    {
+      "label": "Writes",
+      "value": "100M/mo ≈ 40/s",
+      "appearsAtRound": 1
+    },
+    {
+      "label": "Reads (100:1)",
+      "value": "≈ 4,000/s",
+      "appearsAtRound": 1
+    },
+    {
+      "label": "Code space",
+      "value": "62⁷ ≈ 3.5 trillion",
+      "appearsAtRound": 3
+    },
+    {
+      "label": "Storage (5 yr @ ~500 B)",
+      "value": "≈ 3 TB",
+      "appearsAtRound": 3
+    },
+    {
+      "label": "Hot set for cache",
+      "value": "≈ 25 GB — fits in RAM",
+      "appearsAtRound": 4
+    },
+    {
+      "label": "Click events",
+      "value": "4k/s, batched async",
+      "appearsAtRound": 5
+    }
   ]
 }

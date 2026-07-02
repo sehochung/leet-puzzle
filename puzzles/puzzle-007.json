@@ -244,24 +244,24 @@
       "kind": "edge-case",
       "question": "Why nums[lo] <= nums[mid] (with equals) instead of strict <? Which input breaks strict comparison?",
       "options": [
-        "[3, 1] with target 1 — lo == mid there, and strict < would misread the left half as unsorted and search the wrong side",
         "[1] with target 1",
         "[4,5,6,7,0,1,2] with target 3",
-        "No input — it's a style preference"
+        "No input — it's a style preference",
+        "[3, 1] with target 1 — lo == mid there, and strict < would misread the left half as unsorted and search the wrong side"
       ],
-      "correctIndex": 0,
+      "correctIndex": 3,
       "explanation": "With two elements, mid equals lo, so nums[lo] == nums[mid]. The single-element 'half' is trivially sorted; strict < sends the search right and returns -1 for a target sitting at hi."
     },
     {
       "kind": "variation",
       "question": "Follow-up: duplicates are now allowed (e.g. [2,2,2,3,2]). What happens to the worst case?",
       "options": [
-        "Degrades to O(n) — when nums[lo] == nums[mid] == nums[hi] neither half is provably sorted, so you can only shrink the range by one",
         "Still O(log n) with the same code",
         "Becomes O(n log n)",
+        "Degrades to O(n) — when nums[lo] == nums[mid] == nums[hi] neither half is provably sorted, so you can only shrink the range by one",
         "The algorithm fails entirely"
       ],
-      "correctIndex": 0,
+      "correctIndex": 2,
       "explanation": "All-equal ends carry zero information about which side holds the target, so the only safe move is lo++ / hi-- — an adversarial input full of duplicates forces linear time."
     }
   ]
