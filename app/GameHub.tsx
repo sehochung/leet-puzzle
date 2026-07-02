@@ -23,6 +23,11 @@ export type PuzzleMeta = {
   topic: Topic;
 };
 
+export type DesignMeta = {
+  id: string;
+  title: string;
+};
+
 const DAY_MS = 86_400_000;
 
 function dateLabelForDay(d: number): string {
@@ -31,9 +36,11 @@ function dateLabelForDay(d: number): string {
 
 export default function GameHub({
   puzzles,
+  designs,
   todayId,
 }: {
   puzzles: PuzzleMeta[];
+  designs: DesignMeta[];
   todayId: string | null;
 }) {
   // Progress lives in localStorage, so it can only be read after mount — the
@@ -47,7 +54,10 @@ export default function GameHub({
   const p = progress;
   const xp = p?.xp ?? 0;
   const { rank, next, progress: rankProgress } = rankForXp(xp);
-  const solved = p ? Object.keys(p.results).length : 0;
+  const solved = p ? Object.keys(p.results).filter((k) => k.startsWith("puzzle-")).length : 0;
+  const designSolved = p
+    ? Object.keys(p.results).filter((k) => k.startsWith("design-")).length
+    : 0;
   const today = dayIndex(new Date());
   const todayPuzzle = puzzles.find((x) => x.id === todayId) ?? null;
   const doneToday = p !== null && p.streak.lastDailyDay === today;
@@ -145,6 +155,43 @@ export default function GameHub({
                     done ? "bg-green-600" : "bg-black/10 dark:bg-white/15"
                   } ${isToday ? "ring-2 ring-blue-500" : ""}`}
                 />
+              );
+            })}
+          </div>
+        </section>
+      )}
+
+      {/* System design track */}
+      {designs.length > 0 && (
+        <section className="mt-6">
+          <div className="mb-2 flex items-baseline justify-between">
+            <p className="text-xs font-semibold uppercase tracking-wide opacity-50">
+              System design track
+            </p>
+            <p className="text-xs tabular-nums opacity-50">
+              {designSolved}/{designs.length} designed
+            </p>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {designs.map((d) => {
+              const r = p?.results[d.id];
+              return (
+                <Link
+                  key={d.id}
+                  href={`/design/${d.id}`}
+                  className="flex items-center justify-between rounded-xl border border-black/10 px-4 py-3 transition-colors hover:bg-black/5 dark:border-white/15 dark:hover:bg-white/5"
+                >
+                  <span className="font-medium">{d.title}</span>
+                  <span className="text-sm font-semibold tabular-nums">
+                    {r ? (
+                      <span className={r.firstPickScore === 5 ? "text-green-600" : "opacity-80"}>
+                        {r.firstPickScore}/5
+                      </span>
+                    ) : (
+                      <span className="opacity-30">—</span>
+                    )}
+                  </span>
+                </Link>
               );
             })}
           </div>

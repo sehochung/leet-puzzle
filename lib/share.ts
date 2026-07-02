@@ -3,8 +3,9 @@
 // legacy <textarea> fallback for browsers without navigator.clipboard.
 
 export type ShareInput = {
-  puzzleNumber: number; // e.g. 3 for puzzle-003
+  puzzleNumber: number; // e.g. 3 for puzzle-003 / design-003
   title: string;
+  mode?: "code" | "design"; // default "code"
   roundCorrect: readonly boolean[];
   testsPassed: number;
   testsTotal: number;
@@ -16,9 +17,10 @@ export type ShareInput = {
 export function buildShareText(s: ShareInput): string {
   const grid = s.roundCorrect.map((c) => (c ? "\u{1F7E9}" : "\u{1F7E5}")).join("");
   const built = s.roundCorrect.filter(Boolean).length;
+  const design = s.mode === "design";
   const lines = [
-    `Interview Intuition #${s.puzzleNumber} — ${s.title}`,
-    `${grid} ${built}/${s.roundCorrect.length} build`,
+    `Interview Intuition ${design ? "Design " : ""}#${s.puzzleNumber} — ${s.title}`,
+    `${grid} ${built}/${s.roundCorrect.length} ${design ? "design" : "build"}`,
   ];
   const extras: string[] = [];
   if (s.testsTotal > 0) extras.push(`\u{1F9EA} ${s.testsPassed}/${s.testsTotal} tests`);

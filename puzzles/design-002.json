@@ -1,0 +1,158 @@
+{
+  "id": "design-002",
+  "title": "API Rate Limiter",
+  "brief": "Design a rate limiter for a public API: protect the backend from abuse and stampedes while staying invisible to well-behaved users. The interviewer cares about correctness under distribution and what happens when things fail.",
+  "requirements": [
+    "Cluster handles ~10,000 requests/sec at peak",
+    "Per-user limits (e.g. 100 requests/min), enforced across the whole fleet",
+    "Well-behaved users must not notice it (sub-millisecond overhead)",
+    "Over-limit requests get a clear 429 response"
+  ],
+  "rounds": [
+    {
+      "id": 1,
+      "stage": "requirements",
+      "question": "One clarifying question before you design. Which answer changes the architecture most?",
+      "options": [
+        {
+          "conceptLabel": "Is the limit per-user across ALL servers, or per single server?",
+          "rationale": "This is the fork in the road: per-server limits need only local memory, but a fleet-wide per-user limit forces shared state — which drags in a store, atomicity, and a failure story. Everything downstream depends on this answer."
+        },
+        {
+          "conceptLabel": "Which HTTP status code should rejected requests get?",
+          "rationale": "It's 429 by convention — a one-line detail with zero architectural consequence. Burning your clarifying question on it tells the interviewer you can't rank concerns."
+        },
+        {
+          "conceptLabel": "Which web framework do the API servers use?",
+          "rationale": "The limiter should sit in front of (or beside) the app regardless of framework. Framework choice changes an import statement, not the design."
+        },
+        {
+          "conceptLabel": "How many endpoints does the API expose?",
+          "rationale": "Endpoint count barely matters — limits key on the caller, not the route (per-route limits are a config detail on the same machinery). It doesn't reshape any component."
+        }
+      ],
+      "correctIndex": 0
+    },
+    {
+      "id": 2,
+      "stage": "api",
+      "question": "Where in the request path does the limiter belong?",
+      "options": [
+        {
+          "conceptLabel": "In the gateway/middleware layer, checked BEFORE the request does any real work",
+          "rationale": "The whole point is to shed abusive load cheaply. A gateway check rejects in microseconds, before the request touches app logic or the database — one enforcement point, uniform across every endpoint."
+        },
+        {
+          "conceptLabel": "Inside each endpoint handler, per route",
+          "rationale": "N endpoints means N chances to forget one, and the request has already paid routing, auth, and app-server capacity before being rejected. Enforcement belongs at the boundary, once."
+        },
+        {
+          "conceptLabel": "In the client SDK, before the request is sent",
+          "rationale": "Client-side limiting is a courtesy, not a control — anyone with curl bypasses it entirely. The abusers you're designing against are exactly the ones who won't run your SDK."
+        },
+        {
+          "conceptLabel": "In the database layer, rolling back over-limit queries",
+          "rationale": "By the time the database sees the query, the request has consumed everything you were trying to protect. Rejecting after the work is done is load-shedding theater."
+        }
+      ],
+      "correctIndex": 0
+    },
+    {
+      "id": 3,
+      "stage": "data",
+      "question": "Which algorithm tracks each user's usage with O(1) memory and smooth limiting?",
+      "options": [
+        {
+          "conceptLabel": "Token bucket — a refill rate plus a burst allowance, two numbers per user",
+          "rationale": "Tokens refill at the steady rate and the bucket depth permits honest bursts; state is just (tokens, last-refill-time). Sliding-window counters are the other fine answer — the key property is O(1) state with no boundary spikes."
+        },
+        {
+          "conceptLabel": "Fixed window counter — reset the count every minute on the clock",
+          "rationale": "The classic boundary bug: 100 requests at 11:59:59 plus 100 more at 12:00:01 is 200 requests in two seconds, all allowed. Simple, but it permits exactly the burst you were hired to stop."
+        },
+        {
+          "conceptLabel": "Sliding window log — store the timestamp of every request",
+          "rationale": "Perfectly accurate and perfectly unbounded: memory grows with request rate (100 timestamps per user per minute, times millions of users). The accuracy isn't worth O(requests) state."
+        },
+        {
+          "conceptLabel": "Leaky bucket as an actual queue that delays requests",
+          "rationale": "Queueing over-limit requests instead of rejecting them turns your rate limiter into a latency machine and the queue into an unbounded buffer during abuse — the exact stampede amplifier you're defending against."
+        }
+      ],
+      "correctIndex": 0
+    },
+    {
+      "id": 4,
+      "stage": "scale",
+      "question": "Limits are fleet-wide, so counters must be shared. Where does that state live?",
+      "options": [
+        {
+          "conceptLabel": "A centralized in-memory store (Redis) with atomic ops, sharded by user",
+          "rationale": "Atomic INCR/EXPIRE (or a small Lua script for token math) makes check-and-update race-free, sub-millisecond, and sharding by user key spreads the load. This is the industry-standard shape."
+        },
+        {
+          "conceptLabel": "Each gateway node's local memory",
+          "rationale": "With N gateways behind a load balancer, a user's requests scatter across all of them — each node sees 1/N of the traffic and the real limit silently becomes N × 100/min. Local state can't enforce a global limit."
+        },
+        {
+          "conceptLabel": "The primary SQL database with row locks",
+          "rationale": "10k req/s of lock-update-commit on hot user rows will melt the database you built the limiter to protect. Durable storage and ACID are the wrong tools for ephemeral counters."
+        },
+        {
+          "conceptLabel": "A config file on each server, re-synced every minute",
+          "rationale": "Counters change thousands of times per second; a minute-stale file is not state, it's a snapshot of history. File sync is for configuration, not for live coordination."
+        }
+      ],
+      "correctIndex": 0
+    },
+    {
+      "id": 5,
+      "stage": "tradeoff",
+      "question": "Redis goes down. Fail open (allow everything) or fail closed (reject everything)?",
+      "options": [
+        {
+          "conceptLabel": "Fail open with a fallback: allow traffic, alert loudly, degrade to coarse per-node limits",
+          "rationale": "For most public APIs a few minutes of unenforced limits beats a self-inflicted total outage — the limiter is protection, not the product. Local per-node caps keep worst-case abuse bounded while Redis recovers."
+        },
+        {
+          "conceptLabel": "Fail closed — reject every request until Redis returns",
+          "rationale": "You just turned a cache outage into a 100% API outage: the rate limiter DDoSed your own product. Fail-closed is for security gates (auth), not for load protection."
+        },
+        {
+          "conceptLabel": "Retry Redis synchronously until it answers",
+          "rationale": "Blocking every request on a down dependency stacks up threads and timeouts until the gateways themselves fall over — you've converted a partial failure into a cascading one."
+        },
+        {
+          "conceptLabel": "Disable rate limiting permanently after the first failure",
+          "rationale": "Failing open needs to be a temporary, alarmed, self-healing state. A one-way kill switch means one blip and your API runs unprotected forever — nobody will remember to turn it back on."
+        }
+      ],
+      "correctIndex": 0
+    }
+  ],
+  "diagram": {
+    "nodes": [
+      { "id": "client", "label": "Clients", "sublabel": "incl. abusers", "shape": "actor", "x": 20, "y": 130, "w": 100, "h": 60, "appearsAtRound": 0 },
+      { "id": "gw", "label": "API gateway", "sublabel": "rate limiter", "shape": "box", "x": 190, "y": 130, "w": 140, "h": 70, "appearsAtRound": 2 },
+      { "id": "algo", "label": "Token bucket", "sublabel": "rate + burst, O(1)/user", "shape": "box", "x": 190, "y": 25, "w": 140, "h": 60, "appearsAtRound": 3 },
+      { "id": "api", "label": "API servers", "shape": "box", "x": 540, "y": 130, "w": 140, "h": 65, "appearsAtRound": 2 },
+      { "id": "redis", "label": "Redis counters", "sublabel": "sharded, atomic INCR", "shape": "store", "x": 190, "y": 250, "w": 140, "h": 60, "appearsAtRound": 4 },
+      { "id": "local", "label": "Local fallback", "sublabel": "coarse per-node caps", "shape": "box", "x": 400, "y": 250, "w": 140, "h": 60, "appearsAtRound": 5 }
+    ],
+    "edges": [
+      { "from": "client", "to": "gw", "label": "request", "appearsAtRound": 2 },
+      { "from": "gw", "to": "api", "label": "allowed · else 429", "appearsAtRound": 2 },
+      { "from": "gw", "to": "algo", "label": "per-user state", "appearsAtRound": 3 },
+      { "from": "gw", "to": "redis", "label": "atomic check", "appearsAtRound": 4 },
+      { "from": "gw", "to": "local", "label": "if Redis down", "appearsAtRound": 5 }
+    ]
+  },
+  "capacity": [
+    { "label": "Cluster peak", "value": "10,000 req/s", "appearsAtRound": 1 },
+    { "label": "Per-user limit", "value": "100 req/min", "appearsAtRound": 1 },
+    { "label": "State per user", "value": "2 numbers ≈ 16 B", "appearsAtRound": 3 },
+    { "label": "10M users", "value": "≈ 160 MB total", "appearsAtRound": 3 },
+    { "label": "Redis throughput", "value": "~100k ops/s per shard", "appearsAtRound": 4 },
+    { "label": "Latency budget", "value": "< 1–2 ms per request", "appearsAtRound": 5 }
+  ]
+}

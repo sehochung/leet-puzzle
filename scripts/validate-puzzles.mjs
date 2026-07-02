@@ -184,11 +184,79 @@ function validateBridges(bridges, puzzlesById) {
   return counts;
 }
 
+// Design puzzles (design-NNN.json) — mirror lib/parse-design.ts, keep in sync.
+// No compose/execution check: the "artifact" is the diagram, validated for
+// referential integrity (edge endpoints exist, reveal rounds in range) instead.
+const DESIGN_STAGES = ["requirements", "api", "data", "scale", "tradeoff"];
+const DESIGN_SHAPES = ["box", "store", "actor"];
+function validateDesignShape(data) {
+  assert(isRecord(data), "design", "expected object");
+  assert(/^design-\d{3}$/.test(str(data.id, "id")), "id", `expected /^design-\\d{3}$/, got "${data.id}"`);
+  nonEmptyStr(data.title, "title");
+  nonEmptyStr(data.brief, "brief");
+  assert(Array.isArray(data.requirements) && data.requirements.length > 0, "requirements", "expected non-empty array");
+  data.requirements.forEach((r, i) => nonEmptyStr(r, `requirements[${i}]`));
+  assert(Array.isArray(data.rounds), "rounds", "expected array");
+  assert(data.rounds.length === 5, "rounds", `expected length 5, got ${data.rounds.length}`);
+  data.rounds.forEach((v, i) => {
+    const path = `rounds[${i}]`;
+    assert(isRecord(v), path, "expected object");
+    assert(v.id === i + 1, `${path}.id`, `expected ${i + 1}, got ${v.id}`);
+    assert(v.stage === DESIGN_STAGES[i], `${path}.stage`, `expected "${DESIGN_STAGES[i]}", got "${v.stage}"`);
+    nonEmptyStr(v.question, `${path}.question`);
+    assert(Array.isArray(v.options) && v.options.length === 4, `${path}.options`, "expected 4 options");
+    v.options.forEach((o, j) => {
+      assert(isRecord(o), `${path}.options[${j}]`, "expected object");
+      nonEmptyStr(o.conceptLabel, `${path}.options[${j}].conceptLabel`);
+      nonEmptyStr(o.rationale, `${path}.options[${j}].rationale`);
+    });
+    const ci = num(v.correctIndex, `${path}.correctIndex`);
+    assert(Number.isInteger(ci) && ci >= 0 && ci <= 3, `${path}.correctIndex`, `expected integer in [0,3], got ${ci}`);
+  });
+  assert(isRecord(data.diagram), "diagram", "expected object");
+  assert(Array.isArray(data.diagram.nodes) && data.diagram.nodes.length > 0, "diagram.nodes", "expected non-empty array");
+  const ids = new Set();
+  data.diagram.nodes.forEach((n, i) => {
+    const path = `diagram.nodes[${i}]`;
+    assert(isRecord(n), path, "expected object");
+    const id = nonEmptyStr(n.id, `${path}.id`);
+    assert(!ids.has(id), `${path}.id`, `duplicate node id "${id}"`);
+    ids.add(id);
+    nonEmptyStr(n.label, `${path}.label`);
+    assert(DESIGN_SHAPES.includes(n.shape), `${path}.shape`, `expected ${DESIGN_SHAPES.join("|")}, got "${n.shape}"`);
+    for (const k of ["x", "y", "w", "h"]) num(n[k], `${path}.${k}`);
+    const ar = num(n.appearsAtRound, `${path}.appearsAtRound`);
+    assert(Number.isInteger(ar) && ar >= 0 && ar <= 5, `${path}.appearsAtRound`, `expected integer in [0,5], got ${ar}`);
+  });
+  assert(Array.isArray(data.diagram.edges), "diagram.edges", "expected array");
+  data.diagram.edges.forEach((e, i) => {
+    const path = `diagram.edges[${i}]`;
+    assert(isRecord(e), path, "expected object");
+    assert(ids.has(e.from), `${path}.from`, `no node with id "${e.from}"`);
+    assert(ids.has(e.to), `${path}.to`, `no node with id "${e.to}"`);
+    const ar = num(e.appearsAtRound, `${path}.appearsAtRound`);
+    assert(Number.isInteger(ar) && ar >= 0 && ar <= 5, `${path}.appearsAtRound`, `expected integer in [0,5], got ${ar}`);
+  });
+  assert(Array.isArray(data.capacity), "capacity", "expected array");
+  data.capacity.forEach((c, i) => {
+    const path = `capacity[${i}]`;
+    assert(isRecord(c), path, "expected object");
+    nonEmptyStr(c.label, `${path}.label`);
+    nonEmptyStr(c.value, `${path}.value`);
+    const ar = num(c.appearsAtRound, `${path}.appearsAtRound`);
+    assert(Number.isInteger(ar) && ar >= 1 && ar <= 5, `${path}.appearsAtRound`, `expected integer in [1,5], got ${ar}`);
+  });
+}
+
 const only = process.argv.slice(2); // optional: basenames to restrict to, e.g. puzzle-001
 const all = (await readdir(PUZZLES_DIR)).filter((f) => /^puzzle-\d{3}\.json$/.test(f)).sort();
 const files = only.length
   ? all.filter((f) => only.some((o) => f === o || f === `${o}.json`))
   : all;
+const allDesigns = (await readdir(PUZZLES_DIR)).filter((f) => /^design-\d{3}\.json$/.test(f)).sort();
+const designFiles = only.length
+  ? allDesigns.filter((f) => only.some((o) => f === o || f === `${o}.json`))
+  : allDesigns;
 
 let failures = 0;
 const puzzlesById = new Map();
@@ -202,6 +270,18 @@ for (const file of files) {
     console.log(`PASS ${file} (${constructionMode(data)} mode, ${nLightning} lightning)`);
   } catch (err) {
     failures++;
+    console.error(`FAIL ${file}: ${err.message}`);
+  }
+}
+
+let designFailures = 0;
+for (const file of designFiles) {
+  try {
+    const data = JSON.parse(await readFile(join(PUZZLES_DIR, file), "utf8"));
+    validateDesignShape(data);
+    console.log(`PASS ${file} (design, ${data.diagram.nodes.length} nodes / ${data.diagram.edges.length} edges)`);
+  } catch (err) {
+    designFailures++;
     console.error(`FAIL ${file}: ${err.message}`);
   }
 }
@@ -223,5 +303,7 @@ if (only.length === 0) {
   }
 }
 
-console.log(`\n${files.length - failures}/${files.length} passed`);
-process.exit(failures + bridgeFailures > 0 ? 1 : 0);
+console.log(
+  `\n${files.length - failures}/${files.length} puzzles, ${designFiles.length - designFailures}/${designFiles.length} designs passed`,
+);
+process.exit(failures + bridgeFailures + designFailures > 0 ? 1 : 0);
