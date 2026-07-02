@@ -6,6 +6,8 @@ import type { BridgeMap } from "@/lib/bridges";
 import type { Language, Puzzle } from "@/lib/puzzle";
 import { buildConstructedCode } from "@/lib/build-code";
 import { buildPartialRunnableCode } from "@/lib/partial-code";
+import { recordCompletion, type Award } from "@/lib/progress";
+import { buildShareText, copyToClipboard } from "@/lib/share";
 import {
   equalUnordered,
   preloadPyodide,
@@ -65,12 +67,25 @@ function LangToggle({
   );
 }
 
-export default function Player({ puzzle, bridges }: { puzzle: Puzzle; bridges: BridgeMap }) {
+export default function Player({
+  puzzle,
+  bridges,
+  isDaily,
+}: {
+  puzzle: Puzzle;
+  bridges: BridgeMap;
+  isDaily: boolean;
+}) {
   const [roundIdx, setRoundIdx] = useState(0);
   const [answers, setAnswers] = useState<Array<Answer | null>>(EMPTY);
   const [phase, setPhase] = useState<Phase>("building");
   const [language, setLanguage] = useState<Language>("python");
   const [results, setResults] = useState<TestRunResult[] | null>(null);
+  // Progression payout for this run (XP delta, rank, streak) — set when the run
+  // is recorded, shown on the results screen. Null until then (and for Java,
+  // which has no test run to record).
+  const [award, setAward] = useState<Award | null>(null);
+  const [copied, setCopied] = useState(false);
   const [panel, setPanel] = useState<PanelView>({ kind: "idle" });
   const [runtimeReady, setRuntimeReady] = useState(false);
   // Coarse worker boot stage (downloading → booting → ready), shown while the runtime warms.
@@ -213,6 +228,22 @@ export default function Player({ puzzle, bridges }: { puzzle: Puzzle; bridges: B
         if (traceRunId.current !== runId) return;
       }
     }
+    // Record the finished run: XP is improvement-based (replays only pay the delta
+    // over this puzzle's best), the streak moves only when this is today's puzzle.
+    setAward(
+      recordCompletion(
+        puzzle.id,
+        {
+          firstPickScore: answers.filter((a) => a?.correct).length,
+          roundCorrect: answers.map((a) => a?.correct ?? false),
+          testsPassed: acc.filter((r) => r.passed).length,
+          testsTotal: acc.length,
+          lightningScore: null,
+          lightningTotal: null,
+        },
+        isDaily,
+      ),
+    );
     setPhase("results");
   }
 
@@ -220,6 +251,8 @@ export default function Player({ puzzle, bridges }: { puzzle: Puzzle; bridges: B
     setRoundIdx(0);
     setAnswers(EMPTY);
     setResults(null);
+    setAward(null);
+    setCopied(false);
     setBridging(false);
     traceRunId.current++; // invalidate any in-flight trace
     setPanel({ kind: "idle" });
@@ -419,6 +452,28 @@ export default function Player({ puzzle, bridges }: { puzzle: Puzzle; bridges: B
     </main>
   );
 
+  // Copy the Wordle-style emoji grid for this run. `award` gates the button, so
+  // the streak number shown is always the post-recording value.
+  async function share() {
+    if (!award) return;
+    const ok = await copyToClipboard(
+      buildShareText({
+        puzzleNumber: Number(puzzle.id.slice("puzzle-".length)),
+        title: puzzle.title,
+        roundCorrect: answers.map((a) => a?.correct ?? false),
+        testsPassed: results?.filter((r) => r.passed).length ?? 0,
+        testsTotal: results?.length ?? 0,
+        lightningScore: null,
+        lightningTotal: null,
+        streak: award.streak.current,
+      }),
+    );
+    if (ok) {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  }
+
   // Results block, shared by the "results" phase and the Java "ready" state (which has no run).
   // Called as Results() (not <Results/>) so it inlines as children — re-renders don't remount
   // ReviewDiff and its rationale-toggle state survives a language switch.
@@ -454,6 +509,54 @@ export default function Player({ puzzle, bridges }: { puzzle: Puzzle; bridges: B
             </p>
           )}
         </div>
+
+        {/* Progression payout — XP delta, rank ladder position, streak. Only rendered
+            when this run was recorded (Python run completed). */}
+        {award && (
+          <div className="mt-6 rounded-lg border border-black/10 p-4 dark:border-white/15">
+            <div className="flex items-baseline justify-between">
+              <p className="text-sm font-semibold">
+                {award.xpGained > 0 ? (
+                  <span className="text-green-600">+{award.xpGained} XP</span>
+                ) : (
+                  <span className="opacity-60">+0 XP — beat your best run to earn more</span>
+                )}
+              </p>
+              <p className="text-xs tabular-nums opacity-60">{award.totalXp} XP total</p>
+            </div>
+            <div className="mt-3">
+              <div className="flex items-baseline justify-between text-xs">
+                <span className="font-semibold uppercase tracking-wide opacity-70">
+                  {award.rank.title}
+                </span>
+                {award.next && (
+                  <span className="opacity-50">
+                    {award.next.minXp - award.totalXp} XP to {award.next.title}
+                  </span>
+                )}
+              </div>
+              <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-black/10 dark:bg-white/15">
+                <div
+                  className="h-full rounded-full bg-blue-600 transition-all duration-700"
+                  style={{ width: `${Math.round(award.rankProgress * 100)}%` }}
+                />
+              </div>
+            </div>
+            {award.rankedUp && (
+              <p className="mt-3 rounded-md border border-green-600/40 bg-green-50 px-3 py-2 text-sm font-semibold text-green-700 dark:bg-green-500/15 dark:text-green-400">
+                Rank up! You are now {award.rank.title}.
+              </p>
+            )}
+            {isDaily && award.streakExtended && (
+              <p className="mt-3 text-sm font-semibold">
+                {"\u{1F525}"} {award.streak.current}-day streak
+                {award.streak.current === award.streak.best && award.streak.current > 1
+                  ? " — personal best"
+                  : ""}
+              </p>
+            )}
+          </div>
+        )}
 
         {language === "java" && (
           <p className="mt-6 rounded-lg border border-black/10 bg-black/[0.03] p-4 text-sm leading-relaxed opacity-80 dark:border-white/15 dark:bg-white/5">
@@ -513,6 +616,15 @@ export default function Player({ puzzle, bridges }: { puzzle: Puzzle; bridges: B
         )}
 
         <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
+          {award && (
+            <button
+              type="button"
+              onClick={share}
+              className="rounded-lg bg-green-600 px-5 py-2.5 font-semibold text-white transition-colors hover:bg-green-700"
+            >
+              {copied ? "Copied!" : "Share result"}
+            </button>
+          )}
           <button
             type="button"
             onClick={reset}
