@@ -43,6 +43,19 @@ export type TestCase = {
   expected: unknown;
 };
 
+// Lightning round: quick timed follow-ups asked AFTER the build passes its tests —
+// the interviewer's "your solution works; now defend it" phase. Options are plain
+// prose/notation (no code fragments), language-neutral by design.
+export type LightningKind = "complexity" | "edge-case" | "variation";
+
+export type LightningQuestion = {
+  kind: LightningKind;
+  question: string;
+  options: readonly [string, string, string, string];
+  correctIndex: 0 | 1 | 2 | 3;
+  explanation: string; // shown on reveal, right or wrong
+};
+
 export type Puzzle = {
   id: string; // /^puzzle-\d{3}$/
   date: string; // YYYY-MM-DD
@@ -56,6 +69,7 @@ export type Puzzle = {
   canonicalSolutions: { python: string; java: string }; // what all-correct picks produce
   tests: readonly TestCase[]; // >=1; validator runs canonical against these
   rounds: readonly [Round, Round, Round, Round, Round];
+  lightning: readonly LightningQuestion[]; // may be empty; UI hides the round then
   // Derived (not in JSON): "diff" when every option carries non-empty fragments in
   // both languages, so the player's actual pick can be shown green/red per round;
   // "canonical-only" is the fallback (session-004 panel). Always "diff" for current

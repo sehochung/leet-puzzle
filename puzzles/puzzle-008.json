@@ -226,5 +226,43 @@
       ],
       "correctIndex": 0
     }
+  ],
+  "lightning": [
+    {
+      "kind": "complexity",
+      "question": "Time and extra space of the halving loop?",
+      "options": [
+        "O(log n) time, O(1) space",
+        "O(log n) time, O(log n) space",
+        "O(n) time, O(1) space",
+        "O(n log n) time, O(1) space"
+      ],
+      "correctIndex": 0,
+      "explanation": "Iterative halving — no recursion stack, two indices. Each comparison discards half the range."
+    },
+    {
+      "kind": "edge-case",
+      "question": "The input [1, 2, 3] was never rotated. Why does the code still return 1?",
+      "options": [
+        "nums[mid] <= nums[hi] keeps pulling hi leftward until lo == hi == 0 — the code never assumes a rotation exists",
+        "A special case checks sortedness first",
+        "It returns nums[0] by coincidence of the tests",
+        "It doesn't — sorted input is a bug"
+      ],
+      "correctIndex": 0,
+      "explanation": "In a sorted array the else-branch always fires (mid ≤ hi), so hi walks down to lo at index 0. 'Not rotated' is just rotation by zero — no branch needed."
+    },
+    {
+      "kind": "variation",
+      "question": "Why compare nums[mid] against nums[hi] instead of nums[lo]?",
+      "options": [
+        "nums[mid] > nums[lo] is ambiguous — [1,2,3] (min at lo) and [3,4,1] (min right of mid) both satisfy it, so the lo-comparison can't pick a side",
+        "nums[hi] is cached by the CPU",
+        "lo changes more often than hi",
+        "Either comparison works identically"
+      ],
+      "correctIndex": 0,
+      "explanation": "Against hi the signal is clean: mid > hi puts the drop — and the minimum — strictly right of mid; mid ≤ hi puts it at mid or left. Against lo, sorted and rotated cases collide."
+    }
   ]
 }

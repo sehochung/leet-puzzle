@@ -226,5 +226,43 @@
       ],
       "correctIndex": 0
     }
+  ],
+  "lightning": [
+    {
+      "kind": "complexity",
+      "question": "Why is this O(log n) even though the whole array isn't sorted?",
+      "options": [
+        "Every iteration at least one half is provably sorted, and O(1) bound checks decide if the target is inside it — so half the range is always discarded",
+        "The rotation point is located first",
+        "Hash lookups replace comparisons",
+        "It's actually O(n) in the worst case"
+      ],
+      "correctIndex": 0,
+      "explanation": "A rotated array split at mid always leaves one side fully sorted. Membership in a sorted range is a two-comparison check, so each step halves the search space — classic O(log n)."
+    },
+    {
+      "kind": "edge-case",
+      "question": "Why nums[lo] <= nums[mid] (with equals) instead of strict <? Which input breaks strict comparison?",
+      "options": [
+        "[3, 1] with target 1 — lo == mid there, and strict < would misread the left half as unsorted and search the wrong side",
+        "[1] with target 1",
+        "[4,5,6,7,0,1,2] with target 3",
+        "No input — it's a style preference"
+      ],
+      "correctIndex": 0,
+      "explanation": "With two elements, mid equals lo, so nums[lo] == nums[mid]. The single-element 'half' is trivially sorted; strict < sends the search right and returns -1 for a target sitting at hi."
+    },
+    {
+      "kind": "variation",
+      "question": "Follow-up: duplicates are now allowed (e.g. [2,2,2,3,2]). What happens to the worst case?",
+      "options": [
+        "Degrades to O(n) — when nums[lo] == nums[mid] == nums[hi] neither half is provably sorted, so you can only shrink the range by one",
+        "Still O(log n) with the same code",
+        "Becomes O(n log n)",
+        "The algorithm fails entirely"
+      ],
+      "correctIndex": 0,
+      "explanation": "All-equal ends carry zero information about which side holds the target, so the only safe move is lo++ / hi-- — an adversarial input full of duplicates forces linear time."
+    }
   ]
 }

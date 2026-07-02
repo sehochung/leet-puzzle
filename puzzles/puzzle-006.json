@@ -225,5 +225,43 @@
       ],
       "correctIndex": 0
     }
+  ],
+  "lightning": [
+    {
+      "kind": "complexity",
+      "question": "With s of length m and t of length n, what is the total time?",
+      "options": [
+        "O(m + n)",
+        "O(m · n)",
+        "O(m log m)",
+        "O(m²)"
+      ],
+      "correctIndex": 0,
+      "explanation": "Every index of s enters the window once (right) and leaves once (left) — amortized O(m); building the need counter is O(n)."
+    },
+    {
+      "kind": "edge-case",
+      "question": "s=\"a\", t=\"aa\" must return \"\". Why must missing start at len(t) rather than the number of DISTINCT characters?",
+      "options": [
+        "Each duplicate in t needs its own copy in the window — tracking distinct chars would wrongly accept a single 'a'",
+        "set(t) is slower to build",
+        "Counter cannot store duplicates",
+        "It doesn't matter — both work"
+      ],
+      "correctIndex": 0,
+      "explanation": "missing counts total outstanding characters including duplicates; with distinct-only tracking the single 'a' would zero it out and return \"a\" for a t that needs two."
+    },
+    {
+      "kind": "variation",
+      "question": "Follow-up: find the shortest substring containing t as a SUBSEQUENCE (order matters). Which approach replaces the counter?",
+      "options": [
+        "Forward-match t through s, then walk BACKWARD from the match end to find the tight start",
+        "The same counter window",
+        "Sort both strings first",
+        "Binary search over window lengths"
+      ],
+      "correctIndex": 0,
+      "explanation": "Once order matters, counting fails. The forward pass finds where a subsequence match ends; the backward pass shrinks it to the minimal in-order window, then you continue past it."
+    }
   ]
 }

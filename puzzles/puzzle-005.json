@@ -226,5 +226,43 @@
       ],
       "correctIndex": 0
     }
+  ],
+  "lightning": [
+    {
+      "kind": "complexity",
+      "question": "The sliding window with a last-seen map — time and extra space (alphabet size σ)?",
+      "options": [
+        "O(n) time, O(min(n, σ)) space",
+        "O(n) time, exactly O(1) space",
+        "O(n²) time, O(n) space",
+        "O(n log n) time, O(σ) space"
+      ],
+      "correctIndex": 0,
+      "explanation": "One pass; the map never holds more than one entry per distinct character, so space is bounded by min(n, σ) — effectively constant for a fixed alphabet."
+    },
+    {
+      "kind": "edge-case",
+      "question": "For \"abba\", why is the guard last[c] >= start essential (not just c in last)?",
+      "options": [
+        "A stale occurrence BEFORE the window would yank start backwards — at the final 'a', start would jump from 2 back to 1 and readmit the duplicate 'b'",
+        "It makes lookups faster",
+        "It handles the empty string",
+        "It prevents a KeyError"
+      ],
+      "correctIndex": 0,
+      "explanation": "At the last 'a', last['a'] is 0 — outside the window that starts at 2. Jumping start back to 0+1 would shrink-then-grow the window over a repeat. The guard keeps start monotonic."
+    },
+    {
+      "kind": "variation",
+      "question": "Follow-up: longest substring with at most K DISTINCT characters. What changes?",
+      "options": [
+        "Keep per-character counts in the window and shrink from the left while the distinct count exceeds K",
+        "Same code — just a bigger map",
+        "Binary search the answer length",
+        "DP over all prefixes"
+      ],
+      "correctIndex": 0,
+      "explanation": "The jump-the-start trick no longer applies — you need counts, and the left edge contracts one step at a time while distinct > K. Still amortized O(n)."
+    }
   ]
 }

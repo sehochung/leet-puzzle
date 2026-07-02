@@ -21,6 +21,7 @@ import BridgeCard from "./BridgeCard";
 import ConstructedCode from "./ConstructedCode";
 import DebuggerPanel, { type PanelView } from "./DebuggerPanel";
 import DiffPanel from "./DiffPanel";
+import LightningRound from "./LightningRound";
 import ReviewDiff from "./ReviewDiff";
 import TestResults from "./TestResults";
 
@@ -31,8 +32,9 @@ type Answer = { chosen: 0 | 1 | 2 | 3; correct: boolean };
 // corrected via the bridge), so the final program is always correct. After round 5:
 // "ready" (full solution + Run button), "running" (tests animate one at a time through
 // the debugger panel), then "results" (the score appears only after every test has run —
-// it reflects first-pick intuition, not the always-correct final code).
-type Phase = "building" | "ready" | "running" | "results";
+// it reflects first-pick intuition, not the always-correct final code). "lightning" is
+// the optional timed follow-up phase entered FROM results; it returns there when done.
+type Phase = "building" | "ready" | "running" | "results" | "lightning";
 
 const EMPTY: Array<Answer | null> = [null, null, null, null, null];
 
@@ -86,6 +88,10 @@ export default function Player({
   // which has no test run to record).
   const [award, setAward] = useState<Award | null>(null);
   const [copied, setCopied] = useState(false);
+  // Set once the lightning round finishes this run; null = not (yet) played.
+  const [lightningResult, setLightningResult] = useState<{ score: number; total: number } | null>(
+    null,
+  );
   const [panel, setPanel] = useState<PanelView>({ kind: "idle" });
   const [runtimeReady, setRuntimeReady] = useState(false);
   // Coarse worker boot stage (downloading → booting → ready), shown while the runtime warms.
@@ -247,12 +253,34 @@ export default function Player({
     setPhase("results");
   }
 
+  // Lightning finished: re-record with the follow-up score. XP is improvement-based,
+  // so this second recording pays exactly the lightning delta; the award shown keeps
+  // the whole run's accumulated gain.
+  function finishLightning(score: number, total: number) {
+    const a = recordCompletion(
+      puzzle.id,
+      {
+        firstPickScore: answers.filter((x) => x?.correct).length,
+        roundCorrect: answers.map((x) => x?.correct ?? false),
+        testsPassed: results?.filter((r) => r.passed).length ?? 0,
+        testsTotal: results?.length ?? 0,
+        lightningScore: score,
+        lightningTotal: total,
+      },
+      isDaily,
+    );
+    setAward((prev) => (prev ? { ...a, xpGained: a.xpGained + prev.xpGained } : a));
+    setLightningResult({ score, total });
+    setPhase("results");
+  }
+
   function reset() {
     setRoundIdx(0);
     setAnswers(EMPTY);
     setResults(null);
     setAward(null);
     setCopied(false);
+    setLightningResult(null);
     setBridging(false);
     traceRunId.current++; // invalidate any in-flight trace
     setPanel({ kind: "idle" });
@@ -447,6 +475,14 @@ export default function Player({
         </section>
       )}
 
+      {/* [E3] Lightning — timed follow-ups about the code sitting in the editor above.
+          Entered from the results screen; returns there with the score folded in. */}
+      {phase === "lightning" && (
+        <div className={NARROW}>
+          <LightningRound questions={puzzle.lightning} onDone={finishLightning} />
+        </div>
+      )}
+
       {/* [F] Results — the score appears only AFTER every test has run */}
       {phase === "results" && Results()}
     </main>
@@ -463,8 +499,8 @@ export default function Player({
         roundCorrect: answers.map((a) => a?.correct ?? false),
         testsPassed: results?.filter((r) => r.passed).length ?? 0,
         testsTotal: results?.length ?? 0,
-        lightningScore: null,
-        lightningTotal: null,
+        lightningScore: lightningResult?.score ?? null,
+        lightningTotal: lightningResult?.total ?? null,
         streak: award.streak.current,
       }),
     );
@@ -506,9 +542,47 @@ export default function Player({
                 {results.filter((r) => r.passed).length}/{results.length}
               </span>{" "}
               tests passing
+              {lightningResult && (
+                <>
+                  {" · "}
+                  <span
+                    className={
+                      lightningResult.score === lightningResult.total
+                        ? "text-green-600"
+                        : "opacity-80"
+                    }
+                  >
+                    ⚡ {lightningResult.score}/{lightningResult.total}
+                  </span>{" "}
+                  lightning
+                </>
+              )}
             </p>
           )}
         </div>
+
+        {/* Lightning CTA — the interviewer isn't done with you. Only offered once per
+            run, and only after a recorded Python run (the XP path). */}
+        {award && !lightningResult && puzzle.lightning.length > 0 && (
+          <div className="mt-6 rounded-lg border-2 border-blue-600 p-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="font-semibold">⚡ Lightning round</p>
+                <p className="mt-0.5 text-sm opacity-70">
+                  The interviewer has follow-ups about the code you just built.{" "}
+                  {puzzle.lightning.length} questions · 20s each · +15 XP per correct answer.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPhase("lightning")}
+                className="rounded-lg bg-blue-600 px-5 py-2.5 font-semibold text-white transition-colors hover:bg-blue-700"
+              >
+                Start →
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Progression payout — XP delta, rank ladder position, streak. Only rendered
             when this run was recorded (Python run completed). */}

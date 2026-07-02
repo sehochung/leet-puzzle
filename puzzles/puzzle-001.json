@@ -225,5 +225,43 @@
       ],
       "correctIndex": 0
     }
+  ],
+  "lightning": [
+    {
+      "kind": "complexity",
+      "question": "You sort each string to build its key. With n strings of average length k, what is the total time complexity?",
+      "options": [
+        "O(n)",
+        "O(n · k)",
+        "O(n · k log k)",
+        "O(n² · k)"
+      ],
+      "correctIndex": 2,
+      "explanation": "Each of the n strings pays k log k for its sort; the map operations are amortized O(1), so the sorts dominate: O(n · k log k)."
+    },
+    {
+      "kind": "edge-case",
+      "question": "What does your solution do with the input [\"\"] — a single empty string?",
+      "options": [
+        "Crashes — sorting an empty string throws",
+        "Returns [] — nothing to group",
+        "Returns [[\"\"]] — one group holding the empty string",
+        "Returns [[]] — one empty group"
+      ],
+      "correctIndex": 2,
+      "explanation": "Sorting \"\" just yields the empty key, so the empty string lands in bucket \"\" and comes back as its own one-string group. No special case needed."
+    },
+    {
+      "kind": "variation",
+      "question": "Follow-up: strings are guaranteed lowercase a–z and k is large. How do you drop the log k factor?",
+      "options": [
+        "Use a trie keyed by the raw string",
+        "Key by a 26-slot character-count signature",
+        "Binary search over the sorted string list",
+        "Hash each string with a rolling hash"
+      ],
+      "correctIndex": 1,
+      "explanation": "Counting letters gives an O(k) canonical key — anagrams share counts by definition. A raw-string trie never canonicalizes, and rolling hashes are order-sensitive or collision-prone."
+    }
   ]
 }

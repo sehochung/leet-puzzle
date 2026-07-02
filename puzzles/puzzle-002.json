@@ -225,5 +225,43 @@
       ],
       "correctIndex": 0
     }
+  ],
+  "lightning": [
+    {
+      "kind": "complexity",
+      "question": "Your one-pass hashmap solution — time and extra space?",
+      "options": [
+        "O(n) time, O(1) space",
+        "O(n) time, O(n) space",
+        "O(n log n) time, O(n) space",
+        "O(n²) time, O(1) space"
+      ],
+      "correctIndex": 1,
+      "explanation": "One scan with O(1) expected map operations is O(n) time, but the map can end up holding almost every number — O(n) space is the price of the speed."
+    },
+    {
+      "kind": "edge-case",
+      "question": "Why does storing each number AFTER checking for its complement matter for nums=[3, 3], target=6?",
+      "options": [
+        "It doesn't — the order is a style choice",
+        "It stops a number from pairing with itself while still letting two equal values pair",
+        "It avoids overwriting the target value",
+        "It keeps the map smaller"
+      ],
+      "correctIndex": 1,
+      "explanation": "Check-then-store means the second 3 finds the first 3 already in the map, but a lone 3 can never match itself — store-first would return [0, 0] for a single 3 with target 6."
+    },
+    {
+      "kind": "variation",
+      "question": "Follow-up: the array is already sorted. Which approach gives O(n) time with O(1) extra space?",
+      "options": [
+        "The same hashmap scan",
+        "Two pointers walking inward from both ends",
+        "Binary search for each element's complement",
+        "Sort it again, then hashmap"
+      ],
+      "correctIndex": 1,
+      "explanation": "Sorted input unlocks the two-pointer walk: sum too small → move lo, too big → move hi. O(n) time, no map. Binary search per element works but costs O(n log n)."
+    }
   ]
 }

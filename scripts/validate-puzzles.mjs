@@ -90,6 +90,29 @@ function validateShape(data) {
   assert(Array.isArray(data.rounds), "rounds", "expected array");
   assert(data.rounds.length === 5, "rounds", `expected length 5, got ${data.rounds.length}`);
   data.rounds.forEach(validateRound);
+  validateLightning(data.lightning);
+}
+
+// Lightning follow-ups (optional per puzzle; mirror parseLightningArray in
+// lib/parse-puzzle.ts). Plain-string options — no fragments, no code to compose.
+const LIGHTNING_KINDS = ["complexity", "edge-case", "variation"];
+function validateLightning(v) {
+  if (v === undefined) return;
+  assert(Array.isArray(v), "lightning", "expected array");
+  v.forEach((q, i) => {
+    const path = `lightning[${i}]`;
+    assert(isRecord(q), path, "expected object");
+    assert(LIGHTNING_KINDS.includes(q.kind), `${path}.kind`,
+      `expected one of ${LIGHTNING_KINDS.join("|")}, got "${q.kind}"`);
+    nonEmptyStr(q.question, `${path}.question`);
+    assert(Array.isArray(q.options), `${path}.options`, "expected array");
+    assert(q.options.length === 4, `${path}.options`, `expected length 4, got ${q.options.length}`);
+    q.options.forEach((o, j) => nonEmptyStr(o, `${path}.options[${j}]`));
+    const ci = num(q.correctIndex, `${path}.correctIndex`);
+    assert(Number.isInteger(ci) && ci >= 0 && ci <= 3, `${path}.correctIndex`,
+      `expected integer in [0,3], got ${ci}`);
+    nonEmptyStr(q.explanation, `${path}.explanation`);
+  });
 }
 // Rendering the scaffold with the 5 correct fragments must reproduce the canonical
 // solution exactly. This is the "the correct path actually builds the stated answer"
@@ -175,7 +198,8 @@ for (const file of files) {
     validateShape(data);
     validateCompose(data);
     puzzlesById.set(data.id, data);
-    console.log(`PASS ${file} (${constructionMode(data)} mode)`);
+    const nLightning = Array.isArray(data.lightning) ? data.lightning.length : 0;
+    console.log(`PASS ${file} (${constructionMode(data)} mode, ${nLightning} lightning)`);
   } catch (err) {
     failures++;
     console.error(`FAIL ${file}: ${err.message}`);

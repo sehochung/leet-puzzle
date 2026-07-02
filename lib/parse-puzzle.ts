@@ -1,4 +1,6 @@
 import {
+  type LightningKind,
+  type LightningQuestion,
   type Option,
   type Puzzle,
   type Round,
@@ -6,6 +8,8 @@ import {
   type Topic,
   STAGE_ORDER,
 } from "./puzzle";
+
+const LIGHTNING_KINDS = new Set<LightningKind>(["complexity", "edge-case", "variation"]);
 
 const TOPICS = new Set<Topic>([
   "hashmap",
@@ -118,6 +122,38 @@ function parseRound(v: unknown, i: number): Round {
   };
 }
 
+function parseLightning(v: unknown, i: number): LightningQuestion {
+  const path = `lightning[${i}]`;
+  assert(isRecord(v), path, "expected object");
+  const kind = str(v.kind, `${path}.kind`);
+  assert(
+    LIGHTNING_KINDS.has(kind as LightningKind),
+    `${path}.kind`,
+    `expected one of ${[...LIGHTNING_KINDS].join("|")}, got "${kind}"`,
+  );
+  const options = v.options;
+  assert(Array.isArray(options), `${path}.options`, "expected array");
+  assert(options.length === 4, `${path}.options`, `expected length 4, got ${options.length}`);
+  const ci = num(v.correctIndex, `${path}.correctIndex`);
+  assert(
+    ci === 0 || ci === 1 || ci === 2 || ci === 3,
+    `${path}.correctIndex`,
+    `expected integer in [0,3], got ${ci}`,
+  );
+  return {
+    kind: kind as LightningKind,
+    question: nonEmptyStr(v.question, `${path}.question`),
+    options: [
+      nonEmptyStr(options[0], `${path}.options[0]`),
+      nonEmptyStr(options[1], `${path}.options[1]`),
+      nonEmptyStr(options[2], `${path}.options[2]`),
+      nonEmptyStr(options[3], `${path}.options[3]`),
+    ],
+    correctIndex: ci,
+    explanation: nonEmptyStr(v.explanation, `${path}.explanation`),
+  };
+}
+
 function parseTest(v: unknown, i: number): TestCase {
   const path = `tests[${i}]`;
   assert(isRecord(v), path, "expected object");
@@ -192,6 +228,14 @@ export function parsePuzzle(data: unknown): Puzzle {
     },
     tests: tests.map((t, i) => parseTest(t, i)),
     rounds: parsedRounds,
+    // Optional in the JSON (older puzzles predate it) — absent parses as empty.
+    lightning: parseLightningArray(data.lightning),
     constructionMode,
   };
+}
+
+function parseLightningArray(v: unknown): LightningQuestion[] {
+  if (v === undefined) return [];
+  assert(Array.isArray(v), "lightning", "expected array");
+  return v.map((q, i) => parseLightning(q, i));
 }

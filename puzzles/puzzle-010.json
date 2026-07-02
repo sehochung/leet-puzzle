@@ -226,5 +226,43 @@
       ],
       "correctIndex": 0
     }
+  ],
+  "lightning": [
+    {
+      "kind": "complexity",
+      "question": "The tails-with-binary-search formulation — total time?",
+      "options": [
+        "O(n log n)",
+        "O(n²)",
+        "O(n)",
+        "O(log n)"
+      ],
+      "correctIndex": 0,
+      "explanation": "Each of the n elements does one binary search over tails (≤ n long) plus an O(1) append or replace — O(n log n), beating the O(n²) DP table."
+    },
+    {
+      "kind": "edge-case",
+      "question": "[7, 7, 7, 7] returns 1. Which detail makes duplicates NOT extend the subsequence?",
+      "options": [
+        "bisect_left lands ON the existing 7 and REPLACES it instead of appending — strictness preserved",
+        "bisect_right would behave identically",
+        "Duplicates are filtered before the loop",
+        "The answer should actually be 4"
+      ],
+      "correctIndex": 0,
+      "explanation": "bisect_left of an equal value returns that value's own slot, so equal elements overwrite in place and tails never grows. Switching to bisect_right is exactly how you'd get the NON-strict (longest non-decreasing) variant."
+    },
+    {
+      "kind": "variation",
+      "question": "Follow-up: return the actual subsequence, not its length. What's wrong with just reading tails?",
+      "options": [
+        "tails[i] is the smallest tail of ANY length-(i+1) increasing subsequence — its entries come from different chains, so you must record predecessors and backtrack",
+        "tails IS the subsequence already",
+        "Reverse tails and return it",
+        "Reconstruction is impossible in O(n log n)"
+      ],
+      "correctIndex": 0,
+      "explanation": "Replacements splice values from unrelated chains into tails. Store, per element, the index it landed at and its predecessor; after the scan, backtrack from the last length-L element. Same O(n log n)."
+    }
   ]
 }

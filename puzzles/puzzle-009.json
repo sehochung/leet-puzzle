@@ -226,5 +226,43 @@
       ],
       "correctIndex": 0
     }
+  ],
+  "lightning": [
+    {
+      "kind": "complexity",
+      "question": "The two rolling variables vs naive recursion — what's the improvement?",
+      "options": [
+        "O(2ⁿ) time becomes O(n) time with O(1) space",
+        "O(n²) becomes O(n)",
+        "O(n) becomes O(log n)",
+        "Memoized recursion beats the loop"
+      ],
+      "correctIndex": 0,
+      "explanation": "Naive f(n)=f(n-1)+f(n-2) recomputes overlapping subproblems exponentially. Rolling the last two values forward visits each subproblem once, storing only two numbers."
+    },
+    {
+      "kind": "edge-case",
+      "question": "solve(0) returns 1, not 0. Why is that the right base case?",
+      "options": [
+        "There is exactly one way to climb zero stairs — do nothing (the empty sequence of moves)",
+        "It's an off-by-one bug the tests happen to accept",
+        "Zero stairs should raise an error",
+        "Pure convention — 0 would work too"
+      ],
+      "correctIndex": 0,
+      "explanation": "The recurrence needs it: f(2) = f(1) + f(0) only gives the correct 2 if f(0) = 1. Counting the empty way isn't a hack — it IS a way."
+    },
+    {
+      "kind": "variation",
+      "question": "Follow-up: n can be as large as 10¹⁸. How do you answer fast?",
+      "options": [
+        "Fast-doubling / matrix power on the Fibonacci recurrence — O(log n)",
+        "Precompute every n up front",
+        "The O(n) loop is already fine",
+        "Binet's closed-form formula with floats is exact at any n"
+      ],
+      "correctIndex": 0,
+      "explanation": "10¹⁸ iterations is far too slow. A linear recurrence lifts to a 2×2 matrix power, computed by repeated squaring in O(log n) exact integer steps — floats lose precision long before 10¹⁸."
+    }
   ]
 }

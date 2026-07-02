@@ -225,5 +225,43 @@
       ],
       "correctIndex": 0
     }
+  ],
+  "lightning": [
+    {
+      "kind": "complexity",
+      "question": "The two-pointer sweep — time and extra space?",
+      "options": [
+        "O(n) time, O(1) space",
+        "O(n log n) time, O(1) space",
+        "O(n²) time, O(1) space",
+        "O(n) time, O(n) space"
+      ],
+      "correctIndex": 0,
+      "explanation": "Each iteration moves one pointer inward, so the loop runs at most n−1 times with constant work — O(n) time, two indices and a best value — O(1) space."
+    },
+    {
+      "kind": "edge-case",
+      "question": "height=[1, 1]: both lines tie and your code moves hi. Does the answer depend on which side moves on a tie?",
+      "options": [
+        "No — the tied pair's area was already recorded before any pointer moved",
+        "Yes — you must move both pointers on a tie",
+        "Yes — moving hi can skip the optimal pair",
+        "It infinite-loops unless you special-case ties"
+      ],
+      "correctIndex": 0,
+      "explanation": "The area is computed and folded into best BEFORE a pointer moves, so the tied pair is never lost — after that, moving either side is safe by the same capped-height argument."
+    },
+    {
+      "kind": "variation",
+      "question": "The interviewer challenges: 'Prove moving the SHORTER line never skips the best answer.' Which argument works?",
+      "options": [
+        "Any container that keeps the shorter line is capped at its height but is strictly narrower, so it can't beat the area just recorded",
+        "The tallest line is always part of the answer",
+        "Sorting the heights preserves all areas",
+        "The pointers always meet at the maximum height"
+      ],
+      "correctIndex": 0,
+      "explanation": "Pairing the shorter line with ANY nearer partner keeps the same height cap with less width — all those pairs are dominated by the one just scored, so discarding the shorter line is lossless."
+    }
   ]
 }
